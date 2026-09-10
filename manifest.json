@@ -1,0 +1,9 @@
+{
+  "name": "बुलबुले का खेल",
+  "short_name": "बुलबुले का खेल",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fff8ef",
+  "theme_color": "#fff8ef",
+  "lang": "hi"
+}

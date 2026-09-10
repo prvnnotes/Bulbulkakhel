@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fff8ef">
+  <meta name="description" content="बुलबुले का खेल — Mummy के लिए बनाया गया आरामदायक Bubble Shooter">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+  <title>बुलबुले का खेल</title>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <div class="brand">🫧 बुलबुले का खेल</div>
+        <div class="subtitle">मिथिला की रंगीन मुस्कान के साथ</div>
+      </div>
+      <button id="settingsBtn" class="icon-btn" type="button" aria-label="सेटिंग्स">⚙️</button>
+    </header>
+
+    <section class="status">
+      <div class="pill">स्तर <strong id="levelText">1</strong></div>
+      <div class="pill">स्कोर <strong id="scoreText">0</strong></div>
+      <div class="pill">🏆 <strong id="bestText">0</strong></div>
+    </section>
+
+    <section class="game-card">
+      <canvas id="gameCanvas" width="420" height="720" aria-label="बुलबुले का खेल बोर्ड"></canvas>
+      <div id="message" class="message" aria-live="polite">निशाना लगाइए और बुलबुला छोड़िए!</div>
+    </section>
+
+    <section class="controls">
+      <div class="next-box">
+        <span>अगला बुलबुला</span>
+        <span id="nextBubble" class="mini-bubble"></span>
+      </div>
+      <button id="restartBtn" class="main-btn" type="button">↻ फिर से खेलें</button>
+      <button id="soundBtn" class="secondary-btn" type="button">🔊 ध्वनि</button>
+    </section>
+
+    <div id="settingsPanel" class="settings hidden">
+      <h2>सेटिंग्स</h2>
+      <button id="resetProgressBtn" type="button">प्रगति रीसेट करें</button>
+      <button id="closeSettingsBtn" type="button">बंद करें</button>
+    </div>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
