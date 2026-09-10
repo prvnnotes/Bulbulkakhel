@@ -1,1741 +1,1892 @@
 /* ============================================================
    बुलबुले का खेल
-   GAME ENGINE — V3
-   Premium Mithila Bubble Shooter
+   PREMIUM MITHILA BUBBLE SHOOTER
+   Launcher + Bounce + Falling Physics
    ============================================================ */
 
 (() => {
+
   "use strict";
 
-  /* ==========================================================
-     DOM
-     ========================================================== */
-
-  const $ = (id) => document.getElementById(id);
-
-  const homeScreen = $("homeScreen");
-  const levelsScreen = $("levelsScreen");
-  const gameScreen = $("gameScreen");
-
-  const startBtn = $("startBtn");
-  const homeLevelsBtn = $("homeLevelsBtn");
-  const backHomeBtn = $("backHomeBtn");
-  const gameBackBtn = $("gameBackBtn");
-
-  const pauseBtn = $("pauseBtn");
-  const resumeBtn = $("resumeBtn");
-  const pauseRestartBtn = $("pauseRestartBtn");
-
-  const soundBtn = $("soundBtn");
-
-  const gameOverOverlay = $("gameOverOverlay");
-  const gameOverRetryBtn = $("gameOverRetryBtn");
-  const gameOverLevelsBtn = $("gameOverLevelsBtn");
-
-  const levelCompleteOverlay = $("levelCompleteOverlay");
-  const nextLevelBtn = $("nextLevelBtn");
-  const completeLevelsBtn = $("completeLevelsBtn");
-
-  const scoreValue = $("scoreValue");
-  const levelNumber = $("levelNumber");
-
-  const pressureDots = $("pressureDots");
-  const pressureMessage = $("pressureMessage");
-
-  const nextBubblePreview = $("nextBubblePreview");
-  const nextBubbleSmall = $("nextBubbleSmall");
-
-  const currentBubbleElement = $("currentBubble");
-
-  const gameMessage = $("gameMessage");
-
-  const pauseOverlay = $("pauseOverlay");
-
-  const levelsGrid = $("levelsGrid");
-
-  const canvas = $("gameCanvas");
-  const ctx = canvas.getContext("2d");
-
-  const dangerWarning = $("dangerWarning");
-  const aimHint = $("aimHint");
-
 
   /* ==========================================================
-     CANVAS
-     ========================================================== */
+     BASIC SETTINGS
+  ========================================================== */
+
+  const MAX_LEVEL = 50;
+
+  const SAVE_KEY = "bulbule-ka-khel-v7";
+
+  const COLORS = [
+    "#e85b67",
+    "#e6c64f",
+    "#5eae78",
+    "#5793d4",
+    "#9670c6",
+    "#d77da0"
+  ];
+
+  const canvas =
+    document.getElementById("gameCanvas");
+
+  const ctx =
+    canvas.getContext("2d");
+
+  const $ = id =>
+    document.getElementById(id);
+
 
   const W = 480;
+
   const H = 760;
 
-  canvas.width = W;
-  canvas.height = H;
-
-
-  /* ==========================================================
-     GAME CONSTANTS
-     ========================================================== */
+  const R = 20;
 
   const COLS = 11;
 
-  const RADIUS = 20;
+  const ROW_H = 35;
 
-  const DIAMETER = RADIUS * 2;
+  const TOP = 48;
 
-  const ROW_HEIGHT = 35;
+  const SHOOTER_Y = H - 70;
 
-  const TOP_Y = 48;
-
-  const SHOOTER_X = W / 2;
-
-  const SHOOTER_Y = 690;
-
-  const DANGER_Y = 590;
-
-  const MAX_ROWS = 18;
+  const DANGER_Y = SHOOTER_Y - 100;
 
   const MISS_LIMIT = 3;
-
-  const COLORS = [
-    "red",
-    "yellow",
-    "green",
-    "blue",
-    "purple",
-    "pink"
-  ];
-
-  const COLOR_HEX = {
-    red: {
-      main: "#d95267",
-      light: "#ffaaaa",
-      dark: "#92243a"
-    },
-
-    yellow: {
-      main: "#dfc653",
-      light: "#fff2aa",
-      dark: "#a18221"
-    },
-
-    green: {
-      main: "#5caf79",
-      light: "#bcebcf",
-      dark: "#286145"
-    },
-
-    blue: {
-      main: "#5991d1",
-      light: "#b9dcff",
-      dark: "#28548b"
-    },
-
-    purple: {
-      main: "#9169c5",
-      light: "#e0c8ff",
-      dark: "#553185"
-    },
-
-    pink: {
-      main: "#d8799b",
-      light: "#ffd0df",
-      dark: "#873c5d"
-    }
-  };
 
 
   /* ==========================================================
      GAME STATE
-     ========================================================== */
+  ========================================================== */
 
-  let currentLevel = 1;
-
-  let score = 0;
-
-  let bestScore = 0;
+  let save = loadSave();
 
   let grid = [];
 
-  let currentColor = null;
+  let shooter = 0;
 
-  let nextColor = null;
+  let next = 1;
 
-  let missedShots = 0;
+  let moving = null;
 
-  let isPaused = false;
-
-  let gameOver = false;
-
-  let levelComplete = false;
-
-  let busy = false;
-
-  let shooting = false;
-
-  let lastTime = 0;
-
-  let animationFrame = null;
+  let falling = [];
 
   let particles = [];
 
-  let fallingBubbles = [];
+  let pops = [];
 
-  let flyingBubble = null;
+  let impactRings = [];
 
-  let aimAngle = -Math.PI / 2;
+  let aim = {
+    x: W / 2,
+    y: 230
+  };
 
-  let audioContext = null;
+  let busy = false;
 
-  let soundEnabled = true;
+  let won = false;
 
-  let descentAnimation = null;
+  let gameOver = false;
 
-  let screenShake = 0;
+  let last = 0;
 
-  let messageTimer = null;
+  let shotsSincePop = 0;
 
-  let saveData = loadSave();
+  let descentAnim = null;
+
+  let audioCtx = null;
+
+  let launcherBounce = 0;
+
+  let launcherRecoil = 0;
 
 
   /* ==========================================================
-     SAVE DATA
-     ========================================================== */
+     SAVE
+  ========================================================== */
 
-  function loadSave() {
+  function loadSave(){
 
     const fallback = {
       currentLevel: 1,
       unlocked: 1,
       completed: [],
-      bestScores: {},
       score: 0,
+      best: 0,
       sound: true
     };
 
-    try {
+    try{
 
-      const raw = localStorage.getItem(
-        "bulbuleKaKhelSave"
-      );
+      const current =
+        JSON.parse(
+          localStorage.getItem(SAVE_KEY) || "null"
+        );
 
-      if (!raw) {
-        return fallback;
+      if(current){
+        return {
+          ...fallback,
+          ...current
+        };
       }
 
-      const old = JSON.parse(raw);
+    }catch(_){}
 
-      return {
-        currentLevel:
-          Number(old.currentLevel || old.level || 1),
-
-        unlocked:
-          Number(
-            old.unlocked ||
-            old.level ||
-            old.currentLevel ||
-            1
-          ),
-
-        completed:
-          Array.isArray(old.completed)
-            ? old.completed
-            : [],
-
-        bestScores:
-          old.bestScores || {},
-
-        score:
-          Number(old.score || 0),
-
-        sound:
-          old.sound !== false
-      };
-
-    } catch (error) {
-
-      return fallback;
-    }
+    return fallback;
   }
 
 
-  function saveGame() {
+  function persist(){
 
-    try {
+    try{
 
       localStorage.setItem(
-        "bulbuleKaKhelSave",
-        JSON.stringify(saveData)
+        SAVE_KEY,
+        JSON.stringify(save)
       );
 
-    } catch (error) {
-      // Local storage may be disabled.
-    }
+    }catch(_){}
+
   }
 
 
   /* ==========================================================
-     LEVEL CONFIGURATION
-     ========================================================== */
+     LEVEL
+  ========================================================== */
 
-  function getLevelConfig(level) {
+  function availableColors(){
 
-    const difficulty = Math.min(
-      5,
-      Math.floor((level - 1) / 10)
+    return Math.min(
+      6,
+      3 +
+      Math.floor(
+        (save.currentLevel - 1) / 8
+      )
     );
 
-    let rows = 6;
+  }
 
-    if (level >= 11) rows = 7;
-    if (level >= 21) rows = 8;
-    if (level >= 31) rows = 9;
-    if (level >= 41) rows = 10;
 
-    let colors = 3;
+  function rnd(){
 
-    if (level >= 6) colors = 4;
-    if (level >= 16) colors = 5;
-    if (level >= 31) colors = 6;
+    return Math.floor(
+      Math.random() *
+      availableColors()
+    );
 
-    /*
-      Average pressure remains 3 misses.
-
-      Higher levels don't reduce the number of available
-      shots. Instead, layouts become more strategic.
-    */
-
-    return {
-      rows,
-      colors,
-      difficulty
-    };
   }
 
 
   /* ==========================================================
-     LEVEL GENERATION
-     ========================================================== */
+     POSITION
+  ========================================================== */
 
-  function createLevel(level) {
+  function pos(q,r){
 
-    const config = getLevelConfig(level);
+    return {
+
+      x:
+        W / 2 +
+        (q - (COLS - 1) / 2) *
+        R * 2 +
+        (r % 2 ? R : 0),
+
+      y:
+        TOP +
+        r * ROW_H
+
+    };
+
+  }
+
+
+  function neighbors(q,r){
+
+    const dirs =
+      r % 2
+
+        ? [
+            [-1,0],
+            [1,0],
+            [0,-1],
+            [1,-1],
+            [0,1],
+            [1,1]
+          ]
+
+        : [
+            [-1,0],
+            [1,0],
+            [-1,-1],
+            [0,-1],
+            [-1,1],
+            [0,1]
+          ];
+
+
+    return dirs
+
+      .map(
+        ([x,y]) =>
+          [q+x,r+y]
+      )
+
+      .filter(
+        ([x,y]) =>
+          x >= 0 &&
+          x < COLS &&
+          y >= 0 &&
+          y < grid.length
+      );
+
+  }
+
+
+  /* ==========================================================
+     CREATE LEVEL
+  ========================================================== */
+
+  function createLevel(){
 
     grid = [];
 
-    for (let r = 0; r < config.rows; r++) {
+    const rows =
+      Math.min(
+        6 +
+        Math.floor(
+          (save.currentLevel - 1) / 6
+        ),
+        12
+      );
 
-      const row = [];
 
-      for (let q = 0; q < COLS; q++) {
+    const density =
+      Math.min(
+        0.9,
+        0.68 +
+        save.currentLevel * 0.004
+      );
 
-        /*
-          Keep some holes in later levels to create
-          interesting shooting opportunities.
-        */
 
-        let filled = true;
+    for(let r=0;r<rows;r++){
 
-        if (level >= 6 && r > 1) {
+      grid[r] = [];
 
-          const holeChance =
-            Math.min(
-              0.18,
-              (level - 5) * 0.004
-            );
+      for(let q=0;q<COLS;q++){
 
-          if (Math.random() < holeChance) {
-            filled = false;
-          }
+        let value =
+          Math.random() < density
+            ? rnd()
+            : -1;
+
+
+        if(
+          r > 4 &&
+          Math.random() < 0.18
+        ){
+
+          value = -1;
+
         }
 
-        if (!filled) {
 
-          row.push(null);
+        grid[r][q] = value;
 
-          continue;
-        }
-
-        const available =
-          COLORS.slice(0, config.colors);
-
-        row.push(
-          randomColor(available)
-        );
       }
 
-      grid.push(row);
     }
 
 
-    /*
-      Make the starting board fair.
+    /* Top row always attached */
 
-      Avoid creating huge accidental matches
-      before the player shoots.
-    */
+    for(let q=0;q<COLS;q++){
 
-    removeInitialMatches();
+      if(grid[0][q] < 0){
 
-    missedShots = 0;
+        grid[0][q] = rnd();
 
-    flyingBubble = null;
+      }
 
-    fallingBubbles = [];
+    }
+
+
+    shooter = rnd();
+
+    next = rnd();
+
+    moving = null;
+
+    falling = [];
 
     particles = [];
 
-    descentAnimation = null;
+    pops = [];
 
-    gameOver = false;
-
-    levelComplete = false;
+    impactRings = [];
 
     busy = false;
 
-    shooting = false;
+    won = false;
 
-    screenShake = 0;
+    gameOver = false;
 
-    currentColor =
-      randomColor(
-        COLORS.slice(0, config.colors)
-      );
+    shotsSincePop = 0;
 
-    nextColor =
-      randomColor(
-        COLORS.slice(0, config.colors)
-      );
+    descentAnim = null;
 
-    updateUI();
+    launcherBounce = 0;
 
-    hideOverlay(gameOverOverlay);
-    hideOverlay(levelCompleteOverlay);
-    hideOverlay(pauseOverlay);
+    launcherRecoil = 0;
 
-    showAimHint();
 
-    showMessage(
-      "बुलबुले मिलाइए"
+    msg(
+      "निशाना लगाइए और बुलबुला छोड़िए!"
     );
+
+    ui();
+
   }
 
 
-  function removeInitialMatches() {
+  /* ==========================================================
+     UI
+  ========================================================== */
 
-    for (let attempt = 0; attempt < 30; attempt++) {
+  function ui(){
 
-      let changed = false;
+    $("levelText").textContent =
+      save.currentLevel;
 
-      for (let r = 0; r < grid.length; r++) {
+    $("scoreText").textContent =
+      save.score;
 
-        for (let q = 0; q < COLS; q++) {
+    $("bestText").textContent =
+      save.best;
 
-          const bubble = grid[r][q];
 
-          if (!bubble) continue;
+    setMiniBubble(
+      $("currentBubble"),
+      shooter
+    );
 
-          const cluster =
-            findCluster(q, r, bubble);
+    setMiniBubble(
+      $("nextBubble"),
+      next
+    );
 
-          if (cluster.length >= 3) {
 
-            grid[r][q] =
-              randomColor(
-                COLORS.slice(
-                  0,
-                  getLevelConfig(currentLevel).colors
-                )
-              );
+    const remaining =
+      Math.max(
+        0,
+        MISS_LIMIT - shotsSincePop
+      );
 
-            changed = true;
-          }
-        }
+
+    $("pressureText").textContent =
+      `${remaining} शॉट`;
+
+
+    $("pressureBar").style.width =
+      `${Math.min(
+        100,
+        shotsSincePop /
+        MISS_LIMIT *
+        100
+      )}%`;
+
+  }
+
+
+  function setMiniBubble(
+    element,
+    colorIndex
+  ){
+
+    if(!element) return;
+
+    element.style.background =
+      `radial-gradient(
+        circle at 30% 25%,
+        #fff 0 8%,
+        ${COLORS[colorIndex]} 38%,
+        ${shade(COLORS[colorIndex],-35)} 100%
+      )`;
+
+  }
+
+
+  function shade(hex,amount){
+
+    const n =
+      parseInt(
+        hex.slice(1),
+        16
+      );
+
+
+    const r =
+      Math.max(
+        0,
+        Math.min(
+          255,
+          (n >> 16) + amount
+        )
+      );
+
+
+    const g =
+      Math.max(
+        0,
+        Math.min(
+          255,
+          ((n >> 8) & 255) +
+          amount
+        )
+      );
+
+
+    const b =
+      Math.max(
+        0,
+        Math.min(
+          255,
+          (n & 255) +
+          amount
+        )
+      );
+
+
+    return `rgb(${r},${g},${b})`;
+
+  }
+
+
+  /* ==========================================================
+     SCREENS
+  ========================================================== */
+
+  function show(screen){
+
+    $("homeScreen")
+      .classList.add("hidden");
+
+    $("levelsScreen")
+      .classList.add("hidden");
+
+    $("gameScreen")
+      .classList.add("hidden");
+
+
+    screen.classList.remove("hidden");
+
+  }
+
+
+  function renderLevels(){
+
+    const box =
+      $("levelsGrid");
+
+    box.innerHTML = "";
+
+
+    for(
+      let i=1;
+      i<=MAX_LEVEL;
+      i++
+    ){
+
+      const unlocked =
+        i <= save.unlocked;
+
+      const done =
+        save.completed.includes(i);
+
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+
+      button.className =
+        `level-btn ${
+          done
+            ? "done"
+            : unlocked
+              ? "open"
+              : "locked"
+        }`;
+
+
+      button.innerHTML =
+        unlocked
+
+          ? `${i}${
+              done
+                ? '<span class="star">⭐</span>'
+                : ""
+            }`
+
+          : `🔒<small>${i}</small>`;
+
+
+      if(unlocked){
+
+        button.onclick = () => {
+
+          save.currentLevel = i;
+
+          persist();
+
+          show(
+            $("gameScreen")
+          );
+
+          createLevel();
+
+        };
+
       }
 
-      if (!changed) break;
+
+      box.appendChild(button);
+
     }
+
   }
 
 
   /* ==========================================================
-     RANDOM HELPERS
-     ========================================================== */
+     MESSAGE
+  ========================================================== */
 
-  function randomColor(colors = COLORS) {
+  function msg(text){
 
-    return colors[
-      Math.floor(
-        Math.random() * colors.length
-      )
+    $("message").textContent =
+      text;
+
+  }
+
+
+  /* ==========================================================
+     SOUND
+  ========================================================== */
+
+  function tone(
+    frequency,
+    duration=.08,
+    type="sine",
+    volume=.035
+  ){
+
+    if(!save.sound)
+      return;
+
+
+    try{
+
+      if(!audioCtx){
+
+        audioCtx =
+          new (
+            window.AudioContext ||
+            window.webkitAudioContext
+          )();
+
+      }
+
+
+      const oscillator =
+        audioCtx.createOscillator();
+
+      const gain =
+        audioCtx.createGain();
+
+
+      oscillator.type =
+        type;
+
+      oscillator.frequency.value =
+        frequency;
+
+
+      gain.gain.setValueAtTime(
+        volume,
+        audioCtx.currentTime
+      );
+
+
+      gain.gain.exponentialRampToValueAtTime(
+        .001,
+        audioCtx.currentTime +
+        duration
+      );
+
+
+      oscillator.connect(gain);
+
+      gain.connect(
+        audioCtx.destination
+      );
+
+
+      oscillator.start();
+
+      oscillator.stop(
+        audioCtx.currentTime +
+        duration
+      );
+
+    }catch(_){}
+
+  }
+
+
+  /* ==========================================================
+     FIND MATCH
+  ========================================================== */
+
+  function cluster(q,r){
+
+    const color =
+      grid[r]?.[q];
+
+
+    if(
+      color == null ||
+      color < 0
+    ){
+
+      return [];
+
+    }
+
+
+    const result = [];
+
+    const seen =
+      new Set([
+        `${q},${r}`
+      ]);
+
+
+    const stack = [
+      [q,r]
     ];
-  }
 
 
-  function clamp(value, min, max) {
+    while(stack.length){
 
-    return Math.max(
-      min,
-      Math.min(max, value)
-    );
-  }
+      const [
+        a,
+        b
+      ] =
+        stack.pop();
 
 
-  function lerp(a, b, t) {
+      result.push([
+        a,
+        b
+      ]);
 
-    return a + (b - a) * t;
+
+      for(
+        const [
+          x,
+          y
+        ]
+        of neighbors(a,b)
+      ){
+
+        const key =
+          `${x},${y}`;
+
+
+        if(
+          grid[y]?.[x] === color &&
+          !seen.has(key)
+        ){
+
+          seen.add(key);
+
+          stack.push([
+            x,
+            y
+          ]);
+
+        }
+
+      }
+
+    }
+
+
+    return result;
+
   }
 
 
   /* ==========================================================
-     GRID GEOMETRY
-     ========================================================== */
+     CEILING CONNECTION
+  ========================================================== */
 
-  function getX(q, r) {
+  function ceiling(){
 
-    const offset =
-      r % 2 === 1
-        ? RADIUS
-        : 0;
+    const connected =
+      new Set();
 
-    return (
-      RADIUS +
-      q * DIAMETER +
-      offset
+    const stack = [];
+
+
+    for(
+      let q=0;
+      q<COLS;
+      q++
+    ){
+
+      if(
+        grid[0]?.[q] >= 0
+      ){
+
+        connected.add(
+          `${q},0`
+        );
+
+        stack.push([
+          q,
+          0
+        ]);
+
+      }
+
+    }
+
+
+    while(stack.length){
+
+      const [
+        q,
+        r
+      ] =
+        stack.pop();
+
+
+      for(
+        const [
+          x,
+          y
+        ]
+        of neighbors(q,r)
+      ){
+
+        const key =
+          `${x},${y}`;
+
+
+        if(
+          grid[y]?.[x] >= 0 &&
+          !connected.has(key)
+        ){
+
+          connected.add(key);
+
+          stack.push([
+            x,
+            y
+          ]);
+
+        }
+
+      }
+
+    }
+
+
+    return connected;
+
+  }
+
+
+  /* ==========================================================
+     DETACHED BUBBLES
+  ========================================================== */
+
+  function detach(){
+
+    const connected =
+      ceiling();
+
+    const detached = [];
+
+
+    for(
+      let r=0;
+      r<grid.length;
+      r++
+    ){
+
+      for(
+        let q=0;
+        q<COLS;
+        q++
+      ){
+
+        if(
+          grid[r][q] < 0 ||
+          connected.has(
+            `${q},${r}`
+          )
+        ){
+
+          continue;
+
+        }
+
+
+        const p =
+          pos(q,r);
+
+
+        detached.push({
+
+          x:p.x,
+
+          y:p.y,
+
+          color:
+            grid[r][q],
+
+          vx:
+            (Math.random()-.5) *
+            75,
+
+          vy:
+            -90 -
+            Math.random()*130,
+
+          rot:
+            Math.random() *
+            Math.PI * 2,
+
+          spin:
+            (Math.random()-.5) *
+            5,
+
+          delay:
+            Math.random()*.13,
+
+          life:0,
+
+          bounce:0
+
+        });
+
+
+        grid[r][q] = -1;
+
+      }
+
+    }
+
+
+    falling.push(
+      ...detached
     );
+
+
+    if(detached.length){
+
+      tone(
+        190,
+        .18,
+        "triangle",
+        .045
+      );
+
+
+      for(
+        const bubble of detached
+      ){
+
+        burst(
+          bubble.x,
+          bubble.y,
+          bubble.color,
+          5
+        );
+
+      }
+
+    }
+
+
+    return detached.length;
+
   }
 
 
-  function getY(r) {
+  /* ==========================================================
+     FIND EMPTY ATTACHMENT
+  ========================================================== */
 
-    return TOP_Y +
-      r * ROW_HEIGHT;
-  }
+  function emptyNear(x,y){
 
+    let best = null;
 
-  function getPosition(q, r) {
-
-    return {
-      x: getX(q, r),
-      y: getY(r)
-    };
-  }
+    let distance =
+      Infinity;
 
 
-  function getNeighbors(q, r) {
+    for(
+      let r=0;
+      r<grid.length;
+      r++
+    ){
 
-    const odd = r % 2 === 1;
+      for(
+        let q=0;
+        q<COLS;
+        q++
+      ){
 
-    if (odd) {
+        if(
+          grid[r][q] >= 0
+        ){
 
-      return [
-        [q - 1, r],
-        [q + 1, r],
+          continue;
 
-        [q, r - 1],
-        [q + 1, r - 1],
+        }
 
-        [q, r + 1],
-        [q + 1, r + 1]
+
+        const p =
+          pos(q,r);
+
+
+        const d =
+          (p.x-x)**2 +
+          (p.y-y)**2;
+
+
+        if(d < distance){
+
+          distance = d;
+
+          best = [
+            q,
+            r
+          ];
+
+        }
+
+      }
+
+    }
+
+
+    if(!best){
+
+      grid.push(
+        new Array(COLS)
+          .fill(-1)
+      );
+
+
+      best = [
+        Math.floor(COLS/2),
+        grid.length-1
       ];
 
     }
 
-    return [
-      [q - 1, r],
-      [q + 1, r],
-
-      [q - 1, r - 1],
-      [q, r - 1],
-
-      [q - 1, r + 1],
-      [q, r + 1]
-    ];
-  }
-
-
-  function isInside(q, r) {
-
-    return (
-      q >= 0 &&
-      q < COLS &&
-      r >= 0 &&
-      r < MAX_ROWS
-    );
-  }
-
-
-  /* ==========================================================
-     CLUSTER SEARCH
-     ========================================================== */
-
-  function findCluster(startQ, startR, color) {
-
-    if (
-      !grid[startR] ||
-      !grid[startR][startQ]
-    ) {
-      return [];
-    }
-
-    const visited = new Set();
-
-    const queue = [
-      [startQ, startR]
-    ];
-
-    const result = [];
-
-    while (queue.length) {
-
-      const [q, r] =
-        queue.shift();
-
-      const key = `${q},${r}`;
-
-      if (visited.has(key)) {
-        continue;
-      }
-
-      visited.add(key);
-
-      if (
-        !grid[r] ||
-        !grid[r][q]
-      ) {
-        continue;
-      }
-
-      if (
-        grid[r][q] !== color
-      ) {
-        continue;
-      }
-
-      result.push([q, r]);
-
-      const neighbors =
-        getNeighbors(q, r);
-
-      for (const [nq, nr] of neighbors) {
-
-        if (
-          isInside(nq, nr) &&
-          grid[nr] &&
-          grid[nr][nq] &&
-          grid[nr][nq] === color
-        ) {
-          queue.push([nq, nr]);
-        }
-      }
-    }
-
-    return result;
-  }
-
-
-  /* ==========================================================
-     CEILING CONNECTIVITY
-     ========================================================== */
-
-  function findConnectedToCeiling() {
-
-    const connected = new Set();
-
-    const queue = [];
-
-    for (let q = 0; q < COLS; q++) {
-
-      if (
-        grid[0] &&
-        grid[0][q]
-      ) {
-
-        queue.push([
-          q,
-          0
-        ]);
-      }
-    }
-
-
-    while (queue.length) {
-
-      const [q, r] =
-        queue.shift();
-
-      const key = `${q},${r}`;
-
-      if (connected.has(key)) {
-        continue;
-      }
-
-      if (
-        !grid[r] ||
-        !grid[r][q]
-      ) {
-        continue;
-      }
-
-      connected.add(key);
-
-      for (
-        const [nq, nr]
-        of getNeighbors(q, r)
-      ) {
-
-        if (
-          isInside(nq, nr) &&
-          grid[nr] &&
-          grid[nr][nq] &&
-          !connected.has(
-            `${nq},${nr}`
-          )
-        ) {
-
-          queue.push([
-            nq,
-            nr
-          ]);
-        }
-      }
-    }
-
-    return connected;
-  }
-
-
-  /* ==========================================================
-     SHOOTING
-     ========================================================== */
-
-  function shoot() {
-
-    if (
-      busy ||
-      shooting ||
-      isPaused ||
-      gameOver ||
-      levelComplete ||
-      descentAnimation
-    ) {
-      return;
-    }
-
-    initAudio();
-
-    hideAimHint();
-
-    shooting = true;
-
-    const startX = SHOOTER_X;
-
-    const startY = SHOOTER_Y - 30;
-
-    const speed = 12;
-
-    const dx =
-      Math.cos(aimAngle) * speed;
-
-    const dy =
-      Math.sin(aimAngle) * speed;
-
-    flyingBubble = {
-      x: startX,
-      y: startY,
-      vx: dx,
-      vy: dy,
-      color: currentColor,
-      radius: RADIUS
-    };
-
-    currentColor = nextColor;
-
-    const config =
-      getLevelConfig(currentLevel);
-
-    nextColor =
-      randomColor(
-        COLORS.slice(0, config.colors)
-      );
-
-    updateNextBubble();
-
-    tone(
-      430,
-      0.055,
-      "sine",
-      0.025
-    );
-
-    gameMessage.textContent =
-      "बुलबुला चला...";
-  }
-
-
-  function updateFlyingBubble() {
-
-    if (!flyingBubble) {
-      return;
-    }
-
-    flyingBubble.x +=
-      flyingBubble.vx;
-
-    flyingBubble.y +=
-      flyingBubble.vy;
-
-
-    /*
-      Wall bounce
-    */
-
-    if (
-      flyingBubble.x <= RADIUS
-    ) {
-
-      flyingBubble.x = RADIUS;
-
-      flyingBubble.vx =
-        Math.abs(
-          flyingBubble.vx
-        );
-    }
-
-    if (
-      flyingBubble.x >= W - RADIUS
-    ) {
-
-      flyingBubble.x =
-        W - RADIUS;
-
-      flyingBubble.vx =
-        -Math.abs(
-          flyingBubble.vx
-        );
-    }
-
-
-    /*
-      Ceiling collision
-    */
-
-    if (
-      flyingBubble.y <=
-      TOP_Y - RADIUS
-    ) {
-
-      attachFlyingBubble();
-
-      return;
-    }
-
-
-    /*
-      Bubble collision
-    */
-
-    for (
-      let r = 0;
-      r < grid.length;
-      r++
-    ) {
-
-      for (
-        let q = 0;
-        q < COLS;
-        q++
-      ) {
-
-        if (!grid[r][q]) {
-          continue;
-        }
-
-        const p =
-          getPosition(q, r);
-
-        const distance =
-          Math.hypot(
-            flyingBubble.x - p.x,
-            flyingBubble.y - p.y
-          );
-
-        if (
-          distance <=
-          RADIUS * 2 - 2
-        ) {
-
-          attachFlyingBubble();
-
-          return;
-        }
-      }
-    }
-  }
-
-
-  /* ==========================================================
-     ATTACH SHOT
-     ========================================================== */
-
-  function attachFlyingBubble() {
-
-    if (!flyingBubble) {
-      return;
-    }
-
-    const bubble =
-      flyingBubble;
-
-    flyingBubble = null;
-
-    const cell =
-      findBestEmptyCell(
-        bubble.x,
-        bubble.y
-      );
-
-    if (!cell) {
-
-      shooting = false;
-
-      return;
-    }
-
-    while (
-      grid.length <= cell.r
-    ) {
-
-      grid.push(
-        new Array(COLS).fill(null)
-      );
-    }
-
-    grid[cell.r][cell.q] =
-      bubble.color;
-
-
-    /*
-      Check for a match.
-    */
-
-    const cluster =
-      findCluster(
-        cell.q,
-        cell.r,
-        bubble.color
-      );
-
-
-    if (cluster.length >= 3) {
-
-      handleMatch(
-        cluster,
-        cell
-      );
-
-    } else {
-
-      handleMiss();
-    }
-  }
-
-
-  /* ==========================================================
-     BEST EMPTY CELL
-     ========================================================== */
-
-  function findBestEmptyCell(x, y) {
-
-    let best = null;
-
-    let bestDistance =
-      Infinity;
-
-
-    /*
-      Search normal cells.
-    */
-
-    for (
-      let r = 0;
-      r < MAX_ROWS;
-      r++
-    ) {
-
-      if (!grid[r]) {
-        grid[r] =
-          new Array(COLS).fill(null);
-      }
-
-      for (
-        let q = 0;
-        q < COLS;
-        q++
-      ) {
-
-        if (grid[r][q]) {
-          continue;
-        }
-
-        const p =
-          getPosition(q, r);
-
-        /*
-          Only accept cells close enough
-          to the incoming bubble.
-        */
-
-        const distance =
-          Math.hypot(
-            x - p.x,
-            y - p.y
-          );
-
-        if (
-          distance <
-          RADIUS * 2.45
-        ) {
-
-          /*
-            Prefer cells nearer to the
-            actual shot position.
-          */
-
-          if (
-            distance <
-            bestDistance
-          ) {
-
-            bestDistance =
-              distance;
-
-            best = {
-              q,
-              r
-            };
-          }
-        }
-      }
-    }
-
-
-    /*
-      If no adjacent cell is found,
-      choose the nearest valid empty cell
-      slightly above the collision point.
-    */
-
-    if (!best) {
-
-      for (
-        let r = 0;
-        r < MAX_ROWS;
-        r++
-      ) {
-
-        if (!grid[r]) {
-          grid[r] =
-            new Array(COLS).fill(null);
-        }
-
-        for (
-          let q = 0;
-          q < COLS;
-          q++
-        ) {
-
-          if (grid[r][q]) {
-            continue;
-          }
-
-          const p =
-            getPosition(q, r);
-
-          if (
-            p.y >
-            SHOOTER_Y - 180
-          ) {
-            continue;
-          }
-
-          const distance =
-            Math.hypot(
-              x - p.x,
-              y - p.y
-            );
-
-          if (
-            distance <
-            bestDistance
-          ) {
-
-            bestDistance =
-              distance;
-
-            best = {
-              q,
-              r
-            };
-          }
-        }
-      }
-    }
 
     return best;
+
   }
 
 
   /* ==========================================================
-     MATCH HANDLING
-     ========================================================== */
+     SHOOT
+  ========================================================== */
 
-  function handleMatch(cluster, cell) {
+  function shoot(){
+
+    if(
+      busy ||
+      won ||
+      gameOver ||
+      descentAnim
+    ){
+
+      return;
+
+    }
+
+
+    try{
+
+      if(!audioCtx){
+
+        audioCtx =
+          new (
+            window.AudioContext ||
+            window.webkitAudioContext
+          )();
+
+      }
+
+
+      if(
+        audioCtx.state ===
+        "suspended"
+      ){
+
+        audioCtx.resume();
+
+      }
+
+    }catch(_){}
+
 
     busy = true;
 
-    missedShots = 0;
+    launcherRecoil = 1;
 
-    updatePressureUI();
-
-    const size =
-      cluster.length;
+    launcherBounce = 1;
 
 
-    /*
-      Score
-    */
+    const sx =
+      W / 2;
 
-    const matchScore =
-      size * 20;
-
-    score += matchScore;
+    const sy =
+      SHOOTER_Y;
 
 
-    /*
-      Pop all matched bubbles.
-    */
+    let dx =
+      aim.x - sx;
 
-    for (
-      const [q, r]
-      of cluster
-    ) {
+    let dy =
+      aim.y - sy;
 
-      const p =
-        getPosition(q, r);
 
-      createPopParticles(
-        p.x,
-        p.y,
-        grid[r][q]
-      );
+    if(
+      dy > -45
+    ){
 
-      grid[r][q] = null;
+      dy = -45;
+
     }
+
+
+    const length =
+      Math.hypot(
+        dx,
+        dy
+      ) || 1;
+
+
+    moving = {
+
+      x:sx,
+
+      y:sy,
+
+      vx:
+        dx /
+        length *
+        700,
+
+      vy:
+        dy /
+        length *
+        700,
+
+      color:
+        shooter,
+
+      scale:.88,
+
+      squash:0,
+
+      trail:[]
+
+    };
+
+
+    shooter =
+      next;
+
+    next =
+      rnd();
 
 
     tone(
-      620,
-      0.09,
+      310,
+      .045,
       "sine",
-      0.035
+      .025
     );
 
 
-    /*
-      Detached bubbles
-    */
+    ui();
 
-    const connected =
-      findConnectedToCeiling();
-
-    const detached = [];
-
-    for (
-      let r = 0;
-      r < grid.length;
-      r++
-    ) {
-
-      for (
-        let q = 0;
-        q < COLS;
-        q++
-      ) {
-
-        if (!grid[r][q]) {
-          continue;
-        }
-
-        const key =
-          `${q},${r}`;
-
-        if (
-          !connected.has(key)
-        ) {
-
-          detached.push({
-            q,
-            r,
-            color:
-              grid[r][q]
-          });
-
-          grid[r][q] = null;
-        }
-      }
-    }
-
-
-    if (detached.length) {
-
-      const bonus =
-        detached.length * 30;
-
-      score += bonus;
-
-      createFallingBubbles(
-        detached
-      );
-
-      tone(
-        270,
-        0.12,
-        "triangle",
-        0.035
-      );
-
-      showMessage(
-        detached.length >= 6
-          ? "गजब कऽ देलियै! ✨"
-          : detached.length >= 3
-            ? "अहाँ कमाल कऽ देलियै!"
-            : "बहुत नीक!"
-      );
-
-    } else {
-
-      showMessage(
-        size >= 6
-          ? "गजब कऽ देलियै! ✨"
-          : size >= 4
-            ? "बहुत नीक!"
-            : "अरे वाह! 😄"
-      );
-    }
-
-
-    updateUI();
-
-
-    /*
-      Let pop/fall animation breathe.
-    */
-
-    setTimeout(() => {
-
-      cleanupEmptyRows();
-
-      if (
-        checkLevelComplete()
-      ) {
-
-        finishLevel();
-
-        return;
-      }
-
-      busy = false;
-
-      shooting = false;
-
-      showAimHint();
-
-    }, detached.length ? 620 : 420);
   }
 
 
   /* ==========================================================
-     MISSED SHOT / CEILING PRESSURE
-     ========================================================== */
+     ATTACH
+  ========================================================== */
 
-  function handleMiss() {
+  function attach(){
 
-    missedShots++;
+    if(!moving)
+      return;
 
-    updatePressureUI();
 
-
-    /*
-      EXACT PRESSURE RULE:
-      3 consecutive misses = ceiling down.
-    */
-
-    if (
-      missedShots >= MISS_LIMIT
-    ) {
-
-      missedShots = 0;
-
-      updatePressureUI();
-
-      showMessage(
-        "बुलबुले थोड़ा नीचे आ रहे हैं..."
+    const [
+      q,
+      r
+    ] =
+      emptyNear(
+        moving.x,
+        moving.y
       );
 
-      descendCeiling();
+
+    const color =
+      moving.color;
+
+
+    grid[r][q] =
+      color;
+
+
+    const p =
+      pos(q,r);
+
+
+    moving = null;
+
+
+    impactRings.push({
+
+      x:p.x,
+
+      y:p.y,
+
+      life:0,
+
+      max:.32,
+
+      color
+
+    });
+
+
+    burst(
+      p.x,
+      p.y,
+      color,
+      9
+    );
+
+
+    const group =
+      cluster(q,r);
+
+
+    /* MATCH */
+
+    if(
+      group.length >= 3
+    ){
+
+      shotsSincePop = 0;
+
+
+      for(
+        const [
+          a,
+          b
+        ]
+        of group
+      ){
+
+        const pp =
+          pos(a,b);
+
+
+        grid[b][a] =
+          -1;
+
+
+        pops.push({
+
+          x:pp.x,
+
+          y:pp.y,
+
+          color,
+
+          life:0,
+
+          max:.42,
+
+          phase:
+            Math.random() *
+            6.28
+
+        });
+
+
+        burst(
+          pp.x,
+          pp.y,
+          color,
+          10
+        );
+
+      }
+
+
+      tone(
+        520 +
+        group.length *
+        20,
+
+        .12,
+
+        "sine",
+
+        .045
+      );
+
+
+      save.score +=
+        group.length *
+        20;
+
+
+      const detached =
+        detach();
+
+
+      save.score +=
+        detached *
+        45;
+
+
+      if(detached >= 5){
+
+        msg(
+          "अहाँ कमाल कऽ देलियै! 😄"
+        );
+
+        tone(
+          700,
+          .16,
+          "triangle",
+          .04
+        );
+
+      }
+
+      else if(
+        group.length >= 5
+      ){
+
+        msg(
+          "गजब कऽ देलियै! 🎉"
+        );
+
+      }
+
+      else{
+
+        msg(
+          "अरे वाह! 😄"
+        );
+
+      }
+
+    }
+
+    /* MISS */
+
+    else{
+
+      shotsSincePop++;
+
+      save.score += 5;
+
+
+      if(
+        shotsSincePop >=
+        MISS_LIMIT
+      ){
+
+        shotsSincePop = 0;
+
+        startDescent();
+
+      }
+
+    }
+
+
+    save.best =
+      Math.max(
+        save.best,
+        save.score
+      );
+
+
+    persist();
+
+    ui();
+
+
+    if(clear()){
+
+      win();
 
       return;
+
     }
 
 
-    if (missedShots === 2) {
+    if(!descentAnim){
 
-      showMessage(
-        "ध्यान से... अगला निशाना सोचकर लगाइए।"
-      );
+      busy = false;
 
-    } else {
-
-      showMessage(
-        "कोई बात नहीं, अगला निशाना बेहतर होगा।"
-      );
     }
 
+  }
 
-    busy = false;
 
-    shooting = false;
+  /* ==========================================================
+     LEVEL CLEAR
+  ========================================================== */
 
-    showAimHint();
+  function clear(){
+
+    return (
+
+      grid.length > 0 &&
+
+      grid.every(
+        row =>
+          row.every(
+            value =>
+              value < 0
+          )
+      )
+
+    );
+
   }
 
 
   /* ==========================================================
      CEILING DESCENT
-     ========================================================== */
+  ========================================================== */
 
-  function descendCeiling() {
-
-    if (
-      descentAnimation ||
-      gameOver ||
-      levelComplete
-    ) {
-      return;
-    }
+  function startDescent(){
 
     busy = true;
 
-    shooting = false;
 
-    hideAimHint();
+    const oldRows =
+      grid.map(
+        row =>
+          row.slice()
+      );
 
-    tone(
-      190,
-      0.16,
-      "sawtooth",
-      0.028
-    );
-
-    screenShake = 4;
-
-
-    /*
-      Add a fresh row at the top.
-
-      Existing rows move down one row.
-    */
-
-    const config =
-      getLevelConfig(currentLevel);
 
     const newRow =
-      new Array(COLS).fill(null);
+      new Array(COLS)
+        .fill(-1);
 
 
-    for (
-      let q = 0;
-      q < COLS;
+    const density =
+      Math.min(
+        .9,
+        .68 +
+        save.currentLevel *
+        .004
+      );
+
+
+    for(
+      let q=0;
+      q<COLS;
       q++
-    ) {
+    ){
 
-      /*
-        Keep the new ceiling reasonably open.
-      */
-
-      const fillChance =
-        currentLevel <= 10
-          ? 0.64
-          : 0.70;
-
-      if (
+      if(
         Math.random() <
-        fillChance
-      ) {
+        density
+      ){
 
         newRow[q] =
-          randomColor(
-            COLORS.slice(
-              0,
-              config.colors
-            )
-          );
+          rnd();
+
       }
+
     }
 
 
-    /*
-      Make sure at least several bubbles
-      exist in the new row.
-    */
+    if(
+      newRow.every(
+        value =>
+          value < 0
+      )
+    ){
 
-    if (
-      newRow.filter(Boolean).length < 5
-    ) {
+      newRow[
+        Math.floor(COLS/2)
+      ] = rnd();
 
-      for (let i = 0; i < 5; i++) {
-
-        const q =
-          Math.floor(
-            Math.random() * COLS
-          );
-
-        newRow[q] =
-          randomColor(
-            COLORS.slice(
-              0,
-              config.colors
-            )
-          );
-      }
     }
 
 
-    grid.unshift(newRow);
+    grid.unshift(
+      newRow
+    );
 
 
-    /*
-      Prevent unlimited invisible rows.
-    */
+    descentAnim = {
 
-    if (
-      grid.length > MAX_ROWS
-    ) {
+      t:0,
 
-      grid.pop();
-    }
+      duration:.68,
 
+      oldRows,
 
-    descentAnimation = {
-      start: performance.now(),
-      duration: 520
+      rowAdded:true
+
     };
 
 
-    /*
-      Warning if board is approaching danger.
-    */
+    impactRings.push({
 
-    setDangerVisuals();
+      x:W/2,
 
+      y:TOP+4,
 
-    setTimeout(() => {
+      life:0,
 
-      descentAnimation = null;
+      max:.5,
 
-      screenShake = 0;
+      color:1
 
-      setDangerVisuals();
-
-
-      if (
-        checkDanger()
-      ) {
-
-        triggerGameOver();
-
-        return;
-      }
+    });
 
 
-      busy = false;
+    tone(
+      125,
+      .22,
+      "sawtooth",
+      .025
+    );
 
-      shooting = false;
 
-      showAimHint();
+    msg(
+      "⚠️ बुलबुलों की छत नीचे आ रही है!"
+    );
 
-    }, 550);
   }
 
 
-  /* ==========================================================
-     DANGER CHECK
-     ========================================================== */
+  function finishDescent(){
 
-  function checkDanger() {
+    descentAnim = null;
 
-    for (
-      let r = 0;
-      r < grid.length;
+    busy = false;
+
+
+    burst(
+      W/2,
+      TOP+5,
+      1,
+      16
+    );
+
+
+    if(
+      reachedDanger()
+    ){
+
+      endGame();
+
+    }
+
+
+    ui();
+
+  }
+
+
+  function reachedDanger(){
+
+    for(
+      let r=0;
+      r<grid.length;
       r++
-    ) {
+    ){
 
-      for (
-        let q = 0;
-        q < COLS;
+      for(
+        let q=0;
+        q<COLS;
         q++
-      ) {
+      ){
 
-        if (!grid[r][q]) {
-          continue;
-        }
-
-        const p =
-          getPosition(q, r);
-
-        if (
-          p.y + RADIUS >=
+        if(
+          grid[r][q] >= 0 &&
+          pos(q,r).y + R >=
           DANGER_Y
-        ) {
+        ){
 
           return true;
+
         }
+
       }
+
     }
+
 
     return false;
-  }
 
-
-  function setDangerVisuals() {
-
-    let lowest = 0;
-
-    for (
-      let r = 0;
-      r < grid.length;
-      r++
-    ) {
-
-      for (
-        let q = 0;
-        q < COLS;
-        q++
-      ) {
-
-        if (grid[r][q]) {
-
-          lowest =
-            Math.max(
-              lowest,
-              getY(r) + RADIUS
-            );
-        }
-      }
-    }
-
-
-    const distance =
-      DANGER_Y - lowest;
-
-
-    if (
-      distance < 85
-    ) {
-
-      dangerWarning.classList.add(
-        "danger"
-      );
-
-      dangerWarning.classList.remove(
-        "active"
-      );
-
-      pressureMessage.classList.add(
-        "danger"
-      );
-
-      pressureMessage.classList.remove(
-        "warning"
-      );
-
-    } else if (
-      distance < 150
-    ) {
-
-      dangerWarning.classList.add(
-        "active"
-      );
-
-      dangerWarning.classList.remove(
-        "danger"
-      );
-
-      pressureMessage.classList.add(
-        "warning"
-      );
-
-      pressureMessage.classList.remove(
-        "danger"
-      );
-
-    } else {
-
-      dangerWarning.classList.remove(
-        "active",
-        "danger"
-      );
-
-      pressureMessage.classList.remove(
-        "warning",
-        "danger"
-      );
-    }
   }
 
 
   /* ==========================================================
-     CLEAN EMPTY ROWS
-     ========================================================== */
+     GAME OVER
+  ========================================================== */
 
-  function cleanupEmptyRows() {
+  function endGame(){
 
-    /*
-      Don't remove the first row.
+    gameOver = true;
 
-      Only remove empty rows below it.
-    */
-
-    while (
-      grid.length > 1 &&
-      grid[grid.length - 1].every(
-        (value) => value === null
-      )
-    ) {
-
-      grid.pop();
-    }
-  }
+    busy = true;
 
 
-  /* ==========================================================
-     FALLING BUBBLES
-     ========================================================== */
-
-  function createFallingBubbles(detached) {
-
-    detached.forEach(
-      ({ q, r, color }, index) => {
-
-        const p =
-          getPosition(q, r);
-
-        fallingBubbles.push({
-          x: p.x,
-          y: p.y,
-
-          vx:
-            (Math.random() - 0.5) *
-            1.5,
-
-          vy:
-            1.5 +
-            Math.random() * 1.8,
-
-          rotation:
-            Math.random() *
-            Math.PI,
-
-          rotationSpeed:
-            (Math.random() - 0.5) *
-            0.08,
-
-          color,
-
-          radius: RADIUS,
-
-          delay:
-            index * 24,
-
-          age: 0,
-
-          life:
-            750 +
-            Math.random() * 350
-        });
-      }
+    tone(
+      95,
+      .4,
+      "sawtooth",
+      .035
     );
-  }
 
 
-  function updateFallingBubbles(delta) {
+    setTimeout(
+      () =>
+        openResult(false),
+      450
+    );
 
-    for (
-      let i = fallingBubbles.length - 1;
-      i >= 0;
-      i--
-    ) {
-
-      const b =
-        fallingBubbles[i];
-
-      b.age += delta;
-
-      if (
-        b.age < b.delay
-      ) {
-        continue;
-      }
-
-      b.x += b.vx;
-
-      b.y += b.vy;
-
-      b.vy += 0.055;
-
-      b.rotation +=
-        b.rotationSpeed;
-
-      if (
-        b.age >
-        b.delay + b.life
-      ) {
-
-        fallingBubbles.splice(
-          i,
-          1
-        );
-      }
-    }
   }
 
 
   /* ==========================================================
-     POP PARTICLES
-     ========================================================== */
+     WIN
+  ========================================================== */
 
-  function createPopParticles(
+  function win(){
+
+    won = true;
+
+    busy = true;
+
+
+    save.score += 250;
+
+
+    save.best =
+      Math.max(
+        save.best,
+        save.score
+      );
+
+
+    if(
+      !save.completed.includes(
+        save.currentLevel
+      )
+    ){
+
+      save.completed.push(
+        save.currentLevel
+      );
+
+    }
+
+
+    save.unlocked =
+      Math.min(
+        MAX_LEVEL,
+        Math.max(
+          save.unlocked,
+          save.currentLevel + 1
+        )
+      );
+
+
+    persist();
+
+
+    for(
+      let i=0;
+      i<3;
+      i++
+    ){
+
+      setTimeout(
+        () => {
+
+          burst(
+            W/2 +
+            (Math.random()-.5) *
+            160,
+
+            300 +
+            Math.random()*150,
+
+            i %
+            availableColors(),
+
+            28
+          );
+
+        },
+
+        i*90
+      );
+
+    }
+
+
+    tone(
+      760,
+      .2,
+      "sine",
+      .045
+    );
+
+
+    setTimeout(
+      () =>
+        openResult(true),
+      550
+    );
+
+  }
+
+
+  /* ==========================================================
+     RESULT
+  ========================================================== */
+
+  function openResult(success){
+
+    const panel =
+      $("resultPanel");
+
+
+    panel.classList.remove(
+      "hidden"
+    );
+
+
+    $("resultIcon").textContent =
+      success
+        ? "🌸"
+        : "⬇️";
+
+
+    $("resultTitle").textContent =
+      success
+        ? "बहुत बढ़िया!"
+        : "अरे! छत नीचे आ गई";
+
+
+    $("resultText").textContent =
+
+      success
+
+        ? (
+            save.currentLevel ===
+            MAX_LEVEL
+
+              ? "गजब कऽ देलियै! सभी 50 स्तर पूरे!"
+
+              : "बहुत बढ़िया! स्तर पूरा भऽ गेल।"
+          )
+
+        : "बुलबुले बहुत नीचे आ गए। फिर से कोशिश करिए।";
+
+
+    $("resultScore").textContent =
+      save.score;
+
+
+    $("resultPrimaryBtn").textContent =
+
+      success
+
+        ? (
+            save.currentLevel <
+            MAX_LEVEL
+
+              ? "अगला स्तर"
+
+              : "स्तर चुनें"
+          )
+
+        : "फिर से खेलें";
+
+
+    $("resultPrimaryBtn").onclick =
+      () => {
+
+        panel.classList.add(
+          "hidden"
+        );
+
+
+        if(
+          success &&
+          save.currentLevel <
+          MAX_LEVEL
+        ){
+
+          save.currentLevel++;
+
+          persist();
+
+          createLevel();
+
+          show(
+            $("gameScreen")
+          );
+
+        }
+
+        else if(success){
+
+          renderLevels();
+
+          show(
+            $("levelsScreen")
+          );
+
+        }
+
+        else{
+
+          createLevel();
+
+        }
+
+      };
+
+
+    $("resultSecondaryBtn").onclick =
+      () => {
+
+        panel.classList.add(
+          "hidden"
+        );
+
+        renderLevels();
+
+        show(
+          $("levelsScreen")
+        );
+
+      };
+
+  }
+
+
+  /* ==========================================================
+     EASING
+  ========================================================== */
+
+  function easeOutBack(t){
+
+    const c1 =
+      1.70158;
+
+    const c3 =
+      c1 + 1;
+
+
+    return (
+      1 +
+      c3 *
+      Math.pow(
+        t-1,
+        3
+      ) +
+
+      c1 *
+      Math.pow(
+        t-1,
+        2
+      )
+    );
+
+  }
+
+
+  function easeOutCubic(t){
+
+    return (
+      1 -
+      Math.pow(
+        1-t,
+        3
+      )
+    );
+
+  }
+
+
+  /* ==========================================================
+     PARTICLES
+  ========================================================== */
+
+  function burst(
     x,
     y,
-    color
-  ) {
+    colorIndex,
+    count
+  ){
 
-    for (
-      let i = 0;
-      i < 12;
+    for(
+      let i=0;
+      i<count;
       i++
-    ) {
+    ){
 
       const angle =
         Math.random() *
         Math.PI *
         2;
 
+
       const speed =
-        1 +
-        Math.random() * 3;
+        45 +
+        Math.random() *
+        180;
+
 
       particles.push({
+
         x,
+
         y,
 
         vx:
@@ -1748,107 +1899,492 @@
 
         size:
           1.5 +
-          Math.random() * 2.5,
+          Math.random()*4,
 
-        color,
+        color:
+          COLORS[colorIndex] ||
+          COLORS[0],
 
-        life: 450 +
-          Math.random() * 250,
+        life:0,
 
-        age: 0
+        max:
+          .32 +
+          Math.random()*.48,
+
+        gravity:
+          100 +
+          Math.random()*180
+
       });
+
     }
+
   }
 
 
-  function updateParticles(delta) {
+  /* ==========================================================
+     UPDATE
+  ========================================================== */
 
-    for (
-      let i = particles.length - 1;
-      i >= 0;
+  function update(dt){
+
+    /* Ceiling animation */
+
+    if(descentAnim){
+
+      descentAnim.t =
+        Math.min(
+          descentAnim.duration,
+          descentAnim.t + dt
+        );
+
+
+      if(
+        descentAnim.t >=
+        descentAnim.duration
+      ){
+
+        finishDescent();
+
+      }
+
+    }
+
+
+    /* Launcher bounce */
+
+    launcherBounce =
+      Math.max(
+        0,
+        launcherBounce -
+        dt*3.8
+      );
+
+
+    launcherRecoil =
+      Math.max(
+        0,
+        launcherRecoil -
+        dt*5.5
+      );
+
+
+    /* Moving bubble */
+
+    if(moving){
+
+      moving.trail.push({
+
+        x:moving.x,
+
+        y:moving.y
+
+      });
+
+
+      if(
+        moving.trail.length >
+        7
+      ){
+
+        moving.trail.shift();
+
+      }
+
+
+      moving.x +=
+        moving.vx *
+        dt;
+
+
+      moving.y +=
+        moving.vy *
+        dt;
+
+
+      moving.scale =
+        .9 +
+        Math.sin(
+          Math.min(
+            1,
+            moving.trail.length/7
+          ) *
+          Math.PI
+        ) *
+        .08;
+
+
+      moving.squash =
+        Math.sin(
+          moving.y*.045
+        ) *
+        .025;
+
+
+      /* Wall bounce */
+
+      if(
+        moving.x < R
+      ){
+
+        moving.x = R;
+
+        moving.vx =
+          Math.abs(
+            moving.vx
+          );
+
+        tone(
+          180,
+          .035,
+          "sine",
+          .012
+        );
+
+      }
+
+
+      if(
+        moving.x >
+        W-R
+      ){
+
+        moving.x =
+          W-R;
+
+        moving.vx =
+          -Math.abs(
+            moving.vx
+          );
+
+        tone(
+          180,
+          .035,
+          "sine",
+          .012
+        );
+
+      }
+
+
+      /* Ceiling */
+
+      if(
+        moving.y <= TOP
+      ){
+
+        attach();
+
+      }
+
+      else{
+
+        outer:
+
+        for(
+          let r=0;
+          r<grid.length;
+          r++
+        ){
+
+          for(
+            let q=0;
+            q<COLS;
+            q++
+          ){
+
+            if(
+              grid[r][q] < 0
+            ){
+
+              continue;
+
+            }
+
+
+            const p =
+              pos(q,r);
+
+
+            if(
+              Math.hypot(
+                moving.x-p.x,
+                moving.y-p.y
+              ) <
+              R*1.82
+            ){
+
+              attach();
+
+              break outer;
+
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+
+
+    /* Falling bubbles */
+
+    for(
+      let i=falling.length-1;
+      i>=0;
       i--
-    ) {
+    ){
+
+      const b =
+        falling[i];
+
+
+      if(
+        b.delay > 0
+      ){
+
+        b.delay -= dt;
+
+        continue;
+
+      }
+
+
+      b.life += dt;
+
+
+      /* Gravity */
+
+      b.vy +=
+        650 *
+        dt;
+
+
+      b.x +=
+        b.vx *
+        dt;
+
+
+      b.y +=
+        b.vy *
+        dt;
+
+
+      b.rot +=
+        b.spin *
+        dt;
+
+
+      /* Side movement */
+
+      if(
+        b.x < R
+      ){
+
+        b.x = R;
+
+        b.vx =
+          Math.abs(
+            b.vx
+          )*.7;
+
+      }
+
+
+      if(
+        b.x > W-R
+      ){
+
+        b.x = W-R;
+
+        b.vx =
+          -Math.abs(
+            b.vx
+          )*.7;
+
+      }
+
+
+      /* Bounce */
+
+      if(
+        b.y >
+        H-30 &&
+        b.bounce < 1
+      ){
+
+        b.y =
+          H-30;
+
+
+        b.vy *=
+          -.24;
+
+
+        b.vx *=
+          .85;
+
+
+        b.bounce++;
+
+
+        burst(
+          b.x,
+          b.y,
+          b.color,
+          5
+        );
+
+
+        tone(
+          120,
+          .045,
+          "sine",
+          .012
+        );
+
+      }
+
+
+      if(
+        b.y >
+          H+70 ||
+        b.life >
+          3.5
+      ){
+
+        falling.splice(
+          i,
+          1
+        );
+
+      }
+
+    }
+
+
+    /* Particles */
+
+    for(
+      let i=particles.length-1;
+      i>=0;
+      i--
+    ){
 
       const p =
         particles[i];
 
-      p.age += delta;
 
-      p.x += p.vx;
+      p.life += dt;
 
-      p.y += p.vy;
 
-      p.vx *= 0.98;
+      p.x +=
+        p.vx *
+        dt;
 
-      p.vy *= 0.98;
 
-      if (
-        p.age >= p.life
-      ) {
+      p.y +=
+        p.vy *
+        dt;
+
+
+      p.vy +=
+        p.gravity *
+        dt;
+
+
+      p.vx *=
+        .992;
+
+
+      if(
+        p.life >
+        p.max
+      ){
 
         particles.splice(
           i,
           1
         );
+
       }
+
     }
+
+
+    /* Pops */
+
+    for(
+      let i=pops.length-1;
+      i>=0;
+      i--
+    ){
+
+      pops[i].life += dt;
+
+
+      if(
+        pops[i].life >
+        pops[i].max
+      ){
+
+        pops.splice(
+          i,
+          1
+        );
+
+      }
+
+    }
+
+
+    /* Impact rings */
+
+    for(
+      let i=impactRings.length-1;
+      i>=0;
+      i--
+    ){
+
+      impactRings[i].life += dt;
+
+
+      if(
+        impactRings[i].life >
+        impactRings[i].max
+      ){
+
+        impactRings.splice(
+          i,
+          1
+        );
+
+      }
+
+    }
+
   }
 
 
   /* ==========================================================
-     DRAWING
-     ========================================================== */
+     DRAW
+  ========================================================== */
 
-  function draw() {
+  function draw(){
 
-    ctx.save();
-
-
-    /*
-      Screen shake
-    */
-
-    if (screenShake > 0) {
-
-      ctx.translate(
-        (Math.random() - 0.5) *
-          screenShake,
-        (Math.random() - 0.5) *
-          screenShake
-      );
-    }
+    ctx.clearRect(
+      0,
+      0,
+      W,
+      H
+    );
 
 
-    drawBoardBackground();
+    /* Background */
 
-    drawMithilaDecor();
-
-    drawDangerLine();
-
-    drawGrid();
-
-    drawFlyingBubble();
-
-    drawFallingBubbles();
-
-    drawParticles();
-
-    drawAimGuide();
-
-    drawShooterGlow();
-
-
-    ctx.restore();
-  }
-
-
-  /* ==========================================================
-     BOARD BACKGROUND
-     ========================================================== */
-
-  function drawBoardBackground() {
-
-    const gradient =
+    const bg =
       ctx.createLinearGradient(
         0,
         0,
@@ -1856,23 +2392,28 @@
         H
       );
 
-    gradient.addColorStop(
+
+    bg.addColorStop(
       0,
-      "#142e55"
+      "#102653"
     );
 
-    gradient.addColorStop(
-      0.5,
-      "#102448"
+
+    bg.addColorStop(
+      .55,
+      "#162f5d"
     );
 
-    gradient.addColorStop(
+
+    bg.addColorStop(
       1,
-      "#0a1831"
+      "#0e2043"
     );
+
 
     ctx.fillStyle =
-      gradient;
+      bg;
+
 
     ctx.fillRect(
       0,
@@ -1882,2085 +2423,1521 @@
     );
 
 
-    /*
-      Soft central glow.
-    */
+    drawArt();
 
-    const glow =
-      ctx.createRadialGradient(
-        W / 2,
-        180,
-        30,
-        W / 2,
-        180,
-        350
-      );
+    drawDanger();
 
-    glow.addColorStop(
-      0,
-      "rgba(88, 137, 198, 0.13)"
-    );
 
-    glow.addColorStop(
-      1,
-      "rgba(88, 137, 198, 0)"
-    );
+    /* Ceiling bubbles */
 
-    ctx.fillStyle =
-      glow;
-
-    ctx.fillRect(
-      0,
-      0,
-      W,
-      H
-    );
-  }
-
-
-  /* ==========================================================
-     MITHILA DECOR
-     ========================================================== */
-
-  function drawMithilaDecor() {
-
-    ctx.save();
-
-    ctx.globalAlpha = 0.075;
-
-    ctx.strokeStyle =
-      "#d8b878";
-
-    ctx.lineWidth = 1;
-
-
-    /*
-      Top mandala
-    */
-
-    const cx = W / 2;
-    const cy = 28;
-
-    ctx.beginPath();
-
-    ctx.arc(
-      cx,
-      cy,
-      68,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.stroke();
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-      cx,
-      cy,
-      48,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.stroke();
-
-
-    for (
-      let i = 0;
-      i < 12;
-      i++
-    ) {
-
-      const a =
-        (Math.PI * 2 * i) /
-        12;
-
-      const x1 =
-        cx +
-        Math.cos(a) * 48;
-
-      const y1 =
-        cy +
-        Math.sin(a) * 48;
-
-      const x2 =
-        cx +
-        Math.cos(a) * 68;
-
-      const y2 =
-        cy +
-        Math.sin(a) * 68;
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        x1,
-        y1
-      );
-
-      ctx.lineTo(
-        x2,
-        y2
-      );
-
-      ctx.stroke();
-    }
-
-
-    /*
-      Small floral motifs at sides.
-    */
-
-    drawFloralMotif(
-      28,
-      245,
-      0.9
-    );
-
-    drawFloralMotif(
-      W - 28,
-      245,
-      -0.9
-    );
-
-    drawFloralMotif(
-      26,
-      450,
-      0.75
-    );
-
-    drawFloralMotif(
-      W - 26,
-      450,
-      -0.75
-    );
-
-
-    ctx.restore();
-  }
-
-
-  function drawFloralMotif(
-    x,
-    y,
-    direction
-  ) {
-
-    ctx.save();
-
-    ctx.translate(
-      x,
-      y
-    );
-
-    ctx.rotate(
-      direction
-    );
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-      0,
-      20
-    );
-
-    ctx.quadraticCurveTo(
-      -8,
-      0,
-      0,
-      -20
-    );
-
-    ctx.stroke();
-
-    for (
-      let i = 0;
-      i < 5;
-      i++
-    ) {
-
-      const a =
-        (Math.PI * 2 * i) /
-        5;
-
-      ctx.beginPath();
-
-      ctx.ellipse(
-        Math.cos(a) * 10,
-        Math.sin(a) * 10,
-        5,
-        11,
-        a,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }
-
-
-  /* ==========================================================
-     DANGER LINE
-     ========================================================== */
-
-  function drawDangerLine() {
-
-    const danger =
-      DANGER_Y;
-
-    const distance =
-      getLowestBubbleDistance();
-
-
-    if (
-      distance < 150
-    ) {
-
-      const alpha =
-        clamp(
-          (150 - distance) /
-            150,
-          0.12,
-          0.55
-        );
-
-      ctx.save();
-
-      ctx.strokeStyle =
-        distance < 85
-          ? `rgba(233,137,137,${alpha})`
-          : `rgba(216,184,120,${alpha})`;
-
-      ctx.lineWidth = 1;
-
-      ctx.setLineDash([
-        5,
-        7
-      ]);
-
-      ctx.beginPath();
-
-      ctx.moveTo(
-        25,
-        danger
-      );
-
-      ctx.lineTo(
-        W - 25,
-        danger
-      );
-
-      ctx.stroke();
-
-      ctx.restore();
-    }
-  }
-
-
-  function getLowestBubbleDistance() {
-
-    let lowest = 0;
-
-    for (
-      let r = 0;
-      r < grid.length;
+    for(
+      let r=0;
+      r<grid.length;
       r++
-    ) {
+    ){
 
-      for (
-        let q = 0;
-        q < COLS;
+      for(
+        let q=0;
+        q<COLS;
         q++
-      ) {
+      ){
 
-        if (
-          grid[r][q]
-        ) {
+        if(
+          grid[r][q] < 0
+        ){
 
-          lowest =
-            Math.max(
-              lowest,
-              getY(r) + RADIUS
-            );
-        }
-      }
-    }
-
-    return DANGER_Y - lowest;
-  }
-
-
-  /* ==========================================================
-     GRID DRAWING WITH DESCENT ANIMATION
-     ========================================================== */
-
-  function drawGrid() {
-
-    const progress =
-      descentAnimation
-        ? clamp(
-            (
-              performance.now() -
-              descentAnimation.start
-            ) /
-              descentAnimation.duration,
-            0,
-            1
-          )
-        : 1;
-
-
-    const eased =
-      1 -
-      Math.pow(
-        1 - progress,
-        3
-      );
-
-
-    for (
-      let r = 0;
-      r < grid.length;
-      r++
-    ) {
-
-      for (
-        let q = 0;
-        q < COLS;
-        q++
-      ) {
-
-        const color =
-          grid[r][q];
-
-        if (!color) {
           continue;
+
         }
 
-        let p;
+
+        let p =
+          pos(q,r);
 
 
-        if (
-          descentAnimation
-        ) {
+        if(descentAnim){
 
-          const from =
-            getPosition(
-              q,
-              r - 1
+          const t =
+            Math.min(
+              1,
+              descentAnim.t /
+              descentAnim.duration
             );
 
-          const to =
-            getPosition(
-              q,
-              r
-            );
+
+          const e =
+            easeOutBack(t);
+
+
+          const targetY =
+            TOP +
+            r*ROW_H;
+
 
           p = {
-            x:
-              lerp(
-                from.x,
-                to.x,
-                eased
-              ),
+
+            x:p.x,
 
             y:
-              lerp(
-                from.y,
-                to.y,
-                eased
-              )
+              targetY -
+              ROW_H *
+              (1-e)
+
           };
 
-        } else {
-
-          p =
-            getPosition(
-              q,
-              r
-            );
         }
 
 
-        drawBubble(
+        bubble(
           p.x,
           p.y,
-          color,
-          RADIUS
+          grid[r][q]
         );
+
       }
-    }
-  }
 
-
-  /* ==========================================================
-     BUBBLE DRAW
-     ========================================================== */
-
-  function drawBubble(
-    x,
-    y,
-    color,
-    radius,
-    alpha = 1
-  ) {
-
-    const c =
-      COLOR_HEX[color] ||
-      COLOR_HEX.blue;
-
-
-    ctx.save();
-
-    ctx.globalAlpha =
-      alpha;
-
-
-    /*
-      Outer shadow
-    */
-
-    ctx.beginPath();
-
-    ctx.arc(
-      x + 1.5,
-      y + 3,
-      radius,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fillStyle =
-      "rgba(0,0,0,0.25)";
-
-    ctx.fill();
-
-
-    /*
-      Main gradient
-    */
-
-    const gradient =
-      ctx.createRadialGradient(
-        x - radius * 0.32,
-        y - radius * 0.36,
-        radius * 0.08,
-        x,
-        y,
-        radius
-      );
-
-    gradient.addColorStop(
-      0,
-      c.light
-    );
-
-    gradient.addColorStop(
-      0.38,
-      c.main
-    );
-
-    gradient.addColorStop(
-      1,
-      c.dark
-    );
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-      x,
-      y,
-      radius,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fillStyle =
-      gradient;
-
-    ctx.fill();
-
-
-    /*
-      Soft rim
-    */
-
-    ctx.beginPath();
-
-    ctx.arc(
-      x,
-      y,
-      radius - 0.8,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.strokeStyle =
-      "rgba(255,255,255,0.13)";
-
-    ctx.lineWidth = 1;
-
-    ctx.stroke();
-
-
-    /*
-      Gloss highlight
-    */
-
-    ctx.beginPath();
-
-    ctx.ellipse(
-      x - radius * 0.32,
-      y - radius * 0.38,
-      radius * 0.27,
-      radius * 0.16,
-      -0.45,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fillStyle =
-      "rgba(255,255,255,0.52)";
-
-    ctx.fill();
-
-
-    /*
-      Tiny secondary reflection
-    */
-
-    ctx.beginPath();
-
-    ctx.arc(
-      x + radius * 0.3,
-      y + radius * 0.25,
-      radius * 0.07,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fillStyle =
-      "rgba(255,255,255,0.18)";
-
-    ctx.fill();
-
-
-    ctx.restore();
-  }
-
-
-  /* ==========================================================
-     FLYING BUBBLE
-     ========================================================== */
-
-  function drawFlyingBubble() {
-
-    if (!flyingBubble) {
-      return;
     }
 
-    drawBubble(
-      flyingBubble.x,
-      flyingBubble.y,
-      flyingBubble.color,
-      RADIUS
-    );
-  }
 
+    /* Falling */
 
-  /* ==========================================================
-     FALLING BUBBLES DRAW
-     ========================================================== */
+    for(
+      const b of falling
+    ){
 
-  function drawFallingBubbles() {
+      if(
+        b.delay > 0
+      ){
 
-    for (
-      const b
-      of fallingBubbles
-    ) {
-
-      if (
-        b.age < b.delay
-      ) {
         continue;
+
       }
 
-      ctx.save();
-
-      ctx.translate(
-        b.x,
-        b.y
-      );
-
-      ctx.rotate(
-        b.rotation
-      );
-
-      drawBubble(
-        0,
-        0,
-        b.color,
-        b.radius
-      );
-
-      ctx.restore();
-    }
-  }
-
-
-  /* ==========================================================
-     PARTICLES DRAW
-     ========================================================== */
-
-  function drawParticles() {
-
-    for (
-      const p
-      of particles
-    ) {
 
       const alpha =
-        1 -
-        p.age /
-          p.life;
-
-      ctx.save();
-
-      ctx.globalAlpha =
-        clamp(
-          alpha,
+        Math.max(
           0,
+          1 -
+          Math.max(
+            0,
+            b.life-2.5
+          ) /
           1
         );
 
-      ctx.fillStyle =
-        COLOR_HEX[
-          p.color
-        ]?.light ||
-        "#ffffff";
+
+      const stretch =
+        Math.min(
+          1,
+          Math.abs(
+            b.vy
+          ) /
+          650
+        );
+
+
+      bubble(
+
+        b.x,
+
+        b.y,
+
+        b.color,
+
+        1 +
+        stretch*.07,
+
+        alpha,
+
+        b.rot,
+
+        1 -
+        stretch*.08,
+
+        1 +
+        stretch*.18
+
+      );
+
+
+      drawFallTrail(b);
+
+    }
+
+
+    /* Pops */
+
+    for(
+      const p of pops
+    ){
+
+      const t =
+        Math.min(
+          1,
+          p.life /
+          p.max
+        );
+
+
+      const scale =
+        1 +
+        easeOutCubic(t) *
+        .45;
+
+
+      const alpha =
+        1-t;
+
+
+      bubble(
+        p.x,
+        p.y,
+        p.color,
+        scale,
+        alpha
+      );
+
+
+      drawPopRing(
+        p.x,
+        p.y,
+        t,
+        COLORS[p.color]
+      );
+
+    }
+
+
+    /* Rings */
+
+    for(
+      const ring
+      of impactRings
+    ){
+
+      const t =
+        Math.min(
+          1,
+          ring.life /
+          ring.max
+        );
+
+
+      const radius =
+        18 +
+        easeOutCubic(t) *
+        42;
+
+
+      ctx.save();
+
+
+      ctx.globalAlpha =
+        1-t;
+
+
+      ctx.strokeStyle =
+        COLORS[ring.color] ||
+        "#d9e8ff";
+
+
+      ctx.lineWidth =
+        3 -
+        t*2;
+
 
       ctx.beginPath();
+
+
+      ctx.arc(
+        ring.x,
+        ring.y,
+        radius,
+        0,
+        Math.PI*2
+      );
+
+
+      ctx.stroke();
+
+
+      ctx.restore();
+
+    }
+
+
+    /* Particles */
+
+    for(
+      const p
+      of particles
+    ){
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          1 -
+          p.life/p.max
+        );
+
+
+      ctx.fillStyle =
+        p.color;
+
+
+      ctx.beginPath();
+
 
       ctx.arc(
         p.x,
         p.y,
         p.size,
         0,
-        Math.PI * 2
+        Math.PI*2
       );
+
 
       ctx.fill();
 
-      ctx.restore();
     }
+
+
+    ctx.globalAlpha = 1;
+
+
+    /* Flying bubble */
+
+    if(moving){
+
+      drawMovingTrail(
+        moving
+      );
+
+
+      bubble(
+
+        moving.x,
+
+        moving.y,
+
+        moving.color,
+
+        moving.scale,
+
+        1,
+
+        0,
+
+        1 + moving.squash,
+
+        1 - moving.squash
+
+      );
+
+    }
+
+
+    /* LAUNCHER */
+
+    drawLauncher();
+
   }
 
 
   /* ==========================================================
-     AIM GUIDE
-     ========================================================== */
+     MITHILA ART
+  ========================================================== */
 
-  function drawAimGuide() {
-
-    if (
-      busy ||
-      shooting ||
-      gameOver ||
-      levelComplete ||
-      isPaused
-    ) {
-      return;
-    }
-
-
-    const startX =
-      SHOOTER_X;
-
-    const startY =
-      SHOOTER_Y - 30;
-
-
-    let x = startX;
-
-    let y = startY;
-
-    let vx =
-      Math.cos(aimAngle);
-
-    let vy =
-      Math.sin(aimAngle);
-
-
-    const length = 250;
+  function drawArt(){
 
     ctx.save();
 
-    ctx.globalAlpha = 0.38;
+    ctx.globalAlpha =
+      .12;
 
     ctx.strokeStyle =
-      "#b9d6f7";
+      "#8bb5ec";
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth =
+      1.5;
 
-    ctx.setLineDash([
-      5,
-      8
-    ]);
+
+    ctx.strokeRect(
+      9,
+      9,
+      W-18,
+      H-18
+    );
+
+
+    for(
+      let x=25;
+      x<W-10;
+      x+=55
+    ){
+
+      lotus(
+        x,
+        24,
+        7
+      );
+
+
+      lotus(
+        x,
+        H-24,
+        7
+      );
+
+    }
+
+
+    for(
+      let y=110;
+      y<H-100;
+      y+=105
+    ){
+
+      fish(
+        22,
+        y,
+        12
+      );
+
+
+      fish(
+        W-22,
+        y+25,
+        12
+      );
+
+    }
+
+
+    ctx.restore();
+
+  }
+
+
+  function lotus(
+    x,
+    y,
+    s
+  ){
 
     ctx.beginPath();
 
     ctx.moveTo(
       x,
-      y
+      y+s
     );
 
+    ctx.quadraticCurveTo(
+      x-s,
+      y,
+      x,
+      y-s
+    );
 
-    for (
-      let i = 0;
-      i < 34;
-      i++
-    ) {
-
-      x +=
-        vx * 7;
-
-      y +=
-        vy * 7;
-
-
-      if (
-        x <= RADIUS ||
-        x >= W - RADIUS
-      ) {
-
-        vx *= -1;
-      }
-
-
-      ctx.lineTo(
-        x,
-        y
-      );
-
-
-      if (
-        Math.hypot(
-          x - startX,
-          y - startY
-        ) > length
-      ) {
-        break;
-      }
-    }
+    ctx.quadraticCurveTo(
+      x+s,
+      y,
+      x,
+      y+s
+    );
 
     ctx.stroke();
 
-    ctx.restore();
+  }
+
+
+  function fish(
+    x,
+    y,
+    s
+  ){
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      x,
+      y,
+      s,
+      s*.55,
+      0,
+      0,
+      Math.PI*2
+    );
+
+    ctx.moveTo(
+      x-s,
+      y
+    );
+
+    ctx.lineTo(
+      x-s*1.6,
+      y-s*.7
+    );
+
+    ctx.lineTo(
+      x-s*1.6,
+      y+s*.7
+    );
+
+    ctx.closePath();
+
+    ctx.stroke();
+
   }
 
 
   /* ==========================================================
-     SHOOTER GLOW
-     ========================================================== */
+     DANGER LINE
+  ========================================================== */
 
-  function drawShooterGlow() {
+  function drawDanger(){
 
-    const gradient =
-      ctx.createRadialGradient(
-        SHOOTER_X,
-        SHOOTER_Y - 30,
-        4,
-        SHOOTER_X,
-        SHOOTER_Y - 30,
-        65
-      );
+    ctx.save();
 
-    gradient.addColorStop(
-      0,
-      "rgba(130,175,225,0.11)"
-    );
+    ctx.strokeStyle =
+      "rgba(245,190,113,.34)";
 
-    gradient.addColorStop(
-      1,
-      "rgba(130,175,225,0)"
-    );
+    ctx.setLineDash([
+      8,
+      9
+    ]);
 
-    ctx.fillStyle =
-      gradient;
+    ctx.lineWidth =
+      1.5;
+
 
     ctx.beginPath();
 
-    ctx.arc(
-      SHOOTER_X,
-      SHOOTER_Y - 30,
-      65,
-      0,
-      Math.PI * 2
+    ctx.moveTo(
+      18,
+      DANGER_Y
     );
 
+    ctx.lineTo(
+      W-18,
+      DANGER_Y
+    );
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+  }
+
+
+  /* ==========================================================
+     PREMIUM LAUNCHER
+  ========================================================== */
+
+  function drawLauncher(){
+
+    const recoil =
+      launcherRecoil * 9;
+
+
+    const bounce =
+      Math.sin(
+        launcherBounce *
+        Math.PI
+      ) * 2;
+
+
+    ctx.save();
+
+
+    ctx.translate(
+      W/2,
+      SHOOTER_Y +
+      bounce
+    );
+
+
+    /* Glow */
+
+    const glow =
+      ctx.createRadialGradient(
+        0,
+        22,
+        5,
+        0,
+        22,
+        75
+      );
+
+
+    glow.addColorStop(
+      0,
+      "rgba(83,143,220,.26)"
+    );
+
+
+    glow.addColorStop(
+      1,
+      "rgba(83,143,220,0)"
+    );
+
+
+    ctx.fillStyle =
+      glow;
+
+
+    ctx.beginPath();
+
+
+    ctx.ellipse(
+      0,
+      25,
+      75,
+      32,
+      0,
+      0,
+      Math.PI*2
+    );
+
+
     ctx.fill();
+
+
+    /* Launcher body */
+
+    const body =
+      ctx.createLinearGradient(
+        0,
+        8,
+        0,
+        58
+      );
+
+
+    body.addColorStop(
+      0,
+      "#8bb6e8"
+    );
+
+
+    body.addColorStop(
+      .45,
+      "#426da9"
+    );
+
+
+    body.addColorStop(
+      1,
+      "#213f70"
+    );
+
+
+    ctx.fillStyle =
+      body;
+
+
+    ctx.beginPath();
+
+
+    ctx.roundRect(
+      -54,
+      15,
+      108,
+      48,
+      24
+    );
+
+
+    ctx.fill();
+
+
+    ctx.strokeStyle =
+      "rgba(220,239,255,.35)";
+
+
+    ctx.lineWidth = 2;
+
+
+    ctx.stroke();
+
+
+    /* Cradle */
+
+    ctx.fillStyle =
+      "#12294e";
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      0,
+      15,
+      31,
+      Math.PI,
+      Math.PI*2
+    );
+
+
+    ctx.fill();
+
+
+    ctx.strokeStyle =
+      "#8fb8e9";
+
+
+    ctx.lineWidth = 3;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      0,
+      15,
+      28,
+      Math.PI,
+      Math.PI*2
+    );
+
+
+    ctx.stroke();
+
+
+    /* Side fins */
+
+    ctx.fillStyle =
+      "#31588d";
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      -53,
+      23
+    );
+
+    ctx.lineTo(
+      -72,
+      37
+    );
+
+    ctx.lineTo(
+      -51,
+      42
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      53,
+      23
+    );
+
+    ctx.lineTo(
+      72,
+      37
+    );
+
+    ctx.lineTo(
+      51,
+      42
+    );
+
+    ctx.closePath();
+
+    ctx.fill();
+
+
+    /* Pivot */
+
+    ctx.fillStyle =
+      "#d7e9ff";
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      0,
+      15,
+      6,
+      0,
+      Math.PI*2
+    );
+
+
+    ctx.fill();
+
+
+    /* Current bubble */
+
+    bubble(
+
+      0,
+
+      -1-recoil,
+
+      shooter,
+
+      1.02,
+
+      1
+
+    );
+
+
+    ctx.restore();
+
+
+    aimLine();
+
+  }
+
+
+  /* ==========================================================
+     AIM LINE
+  ========================================================== */
+
+  function aimLine(){
+
+    let dx =
+      aim.x -
+      W/2;
+
+
+    let dy =
+      aim.y -
+      SHOOTER_Y;
+
+
+    if(
+      dy > -45
+    ){
+
+      dy = -45;
+
+    }
+
+
+    const length =
+      Math.hypot(
+        dx,
+        dy
+      ) || 1;
+
+
+    ctx.save();
+
+
+    ctx.setLineDash([
+      7,
+      9
+    ]);
+
+
+    ctx.lineWidth = 2;
+
+
+    ctx.strokeStyle =
+      "rgba(215,235,255,.58)";
+
+
+    ctx.shadowColor =
+      "rgba(87,158,235,.35)";
+
+
+    ctx.shadowBlur = 8;
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+      W/2,
+      SHOOTER_Y-1
+    );
+
+
+    ctx.lineTo(
+
+      W/2 +
+      dx/length *
+      230,
+
+      SHOOTER_Y +
+      dy/length *
+      230
+
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+  }
+
+
+  /* ==========================================================
+     TRAILS
+  ========================================================== */
+
+  function drawMovingTrail(b){
+
+    ctx.save();
+
+
+    for(
+      let i=0;
+      i<b.trail.length;
+      i++
+    ){
+
+      const t =
+        b.trail[i];
+
+
+      const alpha =
+        (i /
+        b.trail.length) *
+        .16;
+
+
+      ctx.globalAlpha =
+        alpha;
+
+
+      ctx.fillStyle =
+        COLORS[b.color];
+
+
+      ctx.beginPath();
+
+
+      ctx.arc(
+
+        t.x,
+
+        t.y,
+
+        R *
+        (
+          .35 +
+          i /
+          b.trail.length *
+          .25
+        ),
+
+        0,
+        Math.PI*2
+
+      );
+
+
+      ctx.fill();
+
+    }
+
+
+    ctx.restore();
+
+  }
+
+
+  function drawFallTrail(b){
+
+    if(
+      Math.abs(b.vy) <
+      100
+    ){
+
+      return;
+
+    }
+
+
+    ctx.save();
+
+
+    const alpha =
+      Math.min(
+        .22,
+        Math.abs(b.vy) /
+        2500
+      );
+
+
+    ctx.globalAlpha =
+      alpha;
+
+
+    const g =
+      ctx.createLinearGradient(
+        b.x,
+        b.y-45,
+        b.x,
+        b.y
+      );
+
+
+    g.addColorStop(
+      0,
+      "rgba(255,255,255,0)"
+    );
+
+
+    g.addColorStop(
+      1,
+      COLORS[b.color]
+    );
+
+
+    ctx.fillStyle =
+      g;
+
+
+    ctx.beginPath();
+
+
+    ctx.ellipse(
+      b.x,
+      b.y-25,
+      4,
+      24,
+      0,
+      0,
+      Math.PI*2
+    );
+
+
+    ctx.fill();
+
+
+    ctx.restore();
+
+  }
+
+
+  /* ==========================================================
+     POP RING
+  ========================================================== */
+
+  function drawPopRing(
+    x,
+    y,
+    t,
+    color
+  ){
+
+    ctx.save();
+
+
+    ctx.globalAlpha =
+      (1-t)*.8;
+
+
+    ctx.strokeStyle =
+      color;
+
+
+    ctx.lineWidth =
+      3*(1-t);
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      x,
+      y,
+      20+t*25,
+      0,
+      Math.PI*2
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+  }
+
+
+  /* ==========================================================
+     BUBBLE RENDER
+  ========================================================== */
+
+  function bubble(
+
+    x,
+
+    y,
+
+    c,
+
+    s=1,
+
+    a=1,
+
+    rotation=0,
+
+    sx=1,
+
+    sy=1
+
+  ){
+
+    const rr =
+      R*s;
+
+
+    ctx.save();
+
+
+    ctx.globalAlpha =
+      a;
+
+
+    ctx.translate(
+      x,
+      y
+    );
+
+
+    ctx.rotate(
+      rotation
+    );
+
+
+    ctx.scale(
+      sx,
+      sy
+    );
+
+
+    /* Shadow */
+
+    ctx.globalAlpha =
+      a*.25;
+
+
+    ctx.fillStyle =
+      "#020b1c";
+
+
+    ctx.beginPath();
+
+
+    ctx.ellipse(
+      3,
+      6,
+      rr*.9,
+      rr*.9,
+      0,
+      0,
+      Math.PI*2
+    );
+
+
+    ctx.fill();
+
+
+    /* Main gradient */
+
+    const g =
+      ctx.createRadialGradient(
+        -rr*.35,
+        -rr*.45,
+        2,
+        0,
+        0,
+        rr
+      );
+
+
+    g.addColorStop(
+      0,
+      "#ffffff"
+    );
+
+
+    g.addColorStop(
+      .12,
+      "#eef8ff"
+    );
+
+
+    g.addColorStop(
+      .24,
+      COLORS[c]
+    );
+
+
+    g.addColorStop(
+      .78,
+      COLORS[c]
+    );
+
+
+    g.addColorStop(
+      1,
+      shade(
+        COLORS[c],
+        -48
+      )
+    );
+
+
+    ctx.globalAlpha =
+      a;
+
+
+    ctx.fillStyle =
+      g;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      0,
+      0,
+      rr,
+      0,
+      Math.PI*2
+    );
+
+
+    ctx.fill();
+
+
+    /* Border */
+
+    ctx.strokeStyle =
+      "rgba(255,255,255,.18)";
+
+
+    ctx.lineWidth =
+      1.3;
+
+
+    ctx.stroke();
+
+
+    /* Highlight */
+
+    ctx.fillStyle =
+      "rgba(255,255,255,.48)";
+
+
+    ctx.beginPath();
+
+
+    ctx.ellipse(
+
+      -rr*.3,
+
+      -rr*.4,
+
+      rr*.3,
+
+      rr*.17,
+
+      -.35,
+
+      0,
+
+      Math.PI*2
+
+    );
+
+
+    ctx.fill();
+
+
+    /* Small reflection */
+
+    ctx.fillStyle =
+      "rgba(255,255,255,.15)";
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      rr*.28,
+      rr*.28,
+      rr*.1,
+      0,
+      Math.PI*2
+    );
+
+
+    ctx.fill();
+
+
+    ctx.restore();
+
   }
 
 
   /* ==========================================================
      AIM INPUT
-     ========================================================== */
+  ========================================================== */
 
-  function updateAim(clientX, clientY) {
+  function setAim(
+    clientX,
+    clientY
+  ){
 
     const rect =
       canvas.getBoundingClientRect();
 
-    const x =
+
+    aim.x =
       (
         clientX -
         rect.left
       ) *
-      (W / rect.width);
+      W /
+      rect.width;
 
-    const y =
+
+    aim.y =
       (
         clientY -
         rect.top
       ) *
-      (H / rect.height);
+      H /
+      rect.height;
 
 
-    let dx =
-      x - SHOOTER_X;
+    if(
+      aim.y >
+      SHOOTER_Y-20
+    ){
 
-    let dy =
-      y - (
-        SHOOTER_Y - 30
-      );
+      aim.y =
+        SHOOTER_Y-20;
 
-
-    /*
-      Don't allow the shooter to aim
-      below itself.
-    */
-
-    if (
-      dy > -30
-    ) {
-      dy = -30;
     }
 
-
-    /*
-      Prevent almost-horizontal shots.
-    */
-
-    const angle =
-      Math.atan2(
-        dy,
-        dx
-      );
-
-    const minAngle =
-      -Math.PI + 0.22;
-
-    const maxAngle =
-      -0.22;
-
-
-    aimAngle =
-      clamp(
-        angle,
-        minAngle,
-        maxAngle
-      );
   }
 
 
   canvas.addEventListener(
     "pointermove",
-    (event) => {
+    e => {
 
-      if (
-        isPaused ||
-        gameOver ||
-        levelComplete
-      ) {
-        return;
-      }
-
-      updateAim(
-        event.clientX,
-        event.clientY
+      setAim(
+        e.clientX,
+        e.clientY
       );
+
     }
   );
 
 
   canvas.addEventListener(
     "pointerdown",
-    (event) => {
+    e => {
 
-      if (
-        isPaused ||
-        gameOver ||
-        levelComplete
-      ) {
-        return;
-      }
+      e.preventDefault();
 
-      initAudio();
 
-      updateAim(
-        event.clientX,
-        event.clientY
+      setAim(
+        e.clientX,
+        e.clientY
       );
+
 
       shoot();
+
     }
   );
 
 
   /* ==========================================================
-     UI
-     ========================================================== */
+     BUTTONS
+  ========================================================== */
 
-  function updateUI() {
+  $("startBtn").onclick =
+    () => {
 
-    scoreValue.textContent =
-      score.toLocaleString(
-        "hi-IN"
+      renderLevels();
+
+      show(
+        $("levelsScreen")
       );
 
-    levelNumber.textContent =
-      currentLevel;
-
-    updatePressureUI();
-
-    updateNextBubble();
-
-    updateCurrentBubble();
-
-    setDangerVisuals();
-  }
+    };
 
 
-  function updateCurrentBubble() {
+  $("homeLevelsBtn").onclick =
+    () => {
 
-    if (!currentBubbleElement) {
-      return;
-    }
+      renderLevels();
 
-    const c =
-      COLOR_HEX[
-        currentColor
-      ] || COLOR_HEX.blue;
+      show(
+        $("levelsScreen")
+      );
 
-
-    currentBubbleElement.style.background =
-      `radial-gradient(
-        circle at 30% 25%,
-        ${c.light},
-        ${c.main} 48%,
-        ${c.dark}
-      )`;
-  }
+    };
 
 
-  function updateNextBubble() {
-
-    if (!nextColor) {
-      return;
-    }
-
-    const c =
-      COLOR_HEX[
-        nextColor
-      ] || COLOR_HEX.blue;
-
-
-    const background =
-      `radial-gradient(
-        circle at 30% 25%,
-        ${c.light},
-        ${c.main} 48%,
-        ${c.dark}
-      )`;
-
-
-    nextBubblePreview.style.background =
-      background;
-
-    nextBubbleSmall.style.background =
-      background;
-  }
-
-
-  function updatePressureUI() {
-
-    const dots =
-      pressureDots.querySelectorAll(
-        ".pressure-dot"
+  $("backHomeBtn").onclick =
+    () =>
+      show(
+        $("homeScreen")
       );
 
 
-    dots.forEach(
-      (dot, index) => {
+  $("gameBackBtn").onclick =
+    () => {
 
-        dot.classList.remove(
-          "active",
-          "warning"
-        );
+      renderLevels();
 
-        if (
-          index <
-          missedShots
-        ) {
-
-          dot.classList.add(
-            missedShots >= 2
-              ? "warning"
-              : "active"
-          );
-        }
-      }
-    );
-
-
-    if (
-      missedShots === 0
-    ) {
-
-      pressureMessage.textContent =
-        "ध्यान से निशाना लगाइए";
-
-    } else if (
-      missedShots === 1
-    ) {
-
-      pressureMessage.textContent =
-        "एक निशाना चूक गया";
-
-    } else {
-
-      pressureMessage.textContent =
-        "अगले चूके निशाने पर छत नीचे आएगी";
-    }
-  }
-
-
-  function showMessage(
-    message,
-    duration = 1600
-  ) {
-
-    clearTimeout(
-      messageTimer
-    );
-
-    gameMessage.textContent =
-      message;
-
-    messageTimer =
-      setTimeout(() => {
-
-        if (
-          !gameOver &&
-          !levelComplete
-        ) {
-
-          gameMessage.textContent =
-            "बुलबुले मिलाइए";
-        }
-
-      }, duration);
-  }
-
-
-  function showAimHint() {
-
-    if (
-      aimHint
-    ) {
-
-      aimHint.classList.remove(
-        "hidden"
+      show(
+        $("levelsScreen")
       );
-    }
-  }
+
+    };
 
 
-  function hideAimHint() {
-
-    if (
-      aimHint
-    ) {
-
-      aimHint.classList.add(
-        "hidden"
-      );
-    }
-  }
+  $("restartBtn").onclick =
+    createLevel;
 
 
-  /* ==========================================================
-     LEVEL COMPLETE
-     ========================================================== */
+  $("soundBtn").onclick =
+    () => {
 
-  function checkLevelComplete() {
+      save.sound =
+        !save.sound;
 
-    let count = 0;
+      persist();
 
-    for (
-      const row
-      of grid
-    ) {
+      ui();
 
-      for (
-        const bubble
-        of row
-      ) {
-
-        if (bubble) {
-          count++;
-        }
-      }
-    }
-
-    return count === 0;
-  }
+    };
 
 
-  function finishLevel() {
-
-    levelComplete = true;
-
-    busy = true;
-
-    shooting = false;
+  $("settingsBtn").onclick =
+    () =>
+      $("settingsPanel")
+        .classList
+        .remove("hidden");
 
 
-    /*
-      Save completed level.
-    */
-
-    if (
-      !saveData.completed.includes(
-        currentLevel
-      )
-    ) {
-
-      saveData.completed.push(
-        currentLevel
-      );
-    }
+  $("closeSettingsBtn").onclick =
+    () =>
+      $("settingsPanel")
+        .classList
+        .add("hidden");
 
 
-    /*
-      Unlock next level.
-    */
+  $("resetProgressBtn").onclick =
+    () => {
 
-    saveData.unlocked =
-      Math.max(
-        saveData.unlocked,
-        Math.min(
-          50,
-          currentLevel + 1
+      if(
+        confirm(
+          "क्या आप पूरी प्रगति रीसेट करना चाहते हैं?"
         )
-      );
+      ){
 
+        save = {
 
-    /*
-      Save best score.
-    */
+          currentLevel:1,
 
-    const previousBest =
-      Number(
-        saveData.bestScores[
-          currentLevel
-        ] || 0
-      );
+          unlocked:1,
 
-    if (
-      score >
-      previousBest
-    ) {
+          completed:[],
 
-      saveData.bestScores[
-        currentLevel
-      ] = score;
-    }
+          score:0,
 
+          best:0,
 
-    saveData.score =
-      score;
+          sound:true
 
-    saveData.currentLevel =
-      currentLevel;
+        };
 
-    saveGame();
 
+        persist();
 
-    tone(
-      760,
-      0.16,
-      "sine",
-      0.04
-    );
 
+        $("settingsPanel")
+          .classList
+          .add("hidden");
 
-    setTimeout(() => {
 
-      $("levelCompleteScore")
-        .textContent =
-          score.toLocaleString(
-            "hi-IN"
-          );
+        renderLevels();
 
-      showOverlay(
-        levelCompleteOverlay
-      );
 
-    }, 500);
-  }
-
-
-  /* ==========================================================
-     GAME OVER
-     ========================================================== */
-
-  function triggerGameOver() {
-
-    if (gameOver) {
-      return;
-    }
-
-    gameOver = true;
-
-    busy = true;
-
-    shooting = false;
-
-    hideAimHint();
-
-    screenShake = 5;
-
-    tone(
-      120,
-      0.22,
-      "triangle",
-      0.04
-    );
-
-
-    setTimeout(() => {
-
-      $("gameOverScore")
-        .textContent =
-          score.toLocaleString(
-            "hi-IN"
-          );
-
-      showOverlay(
-        gameOverOverlay
-      );
-
-    }, 250);
-  }
-
-
-  /* ==========================================================
-     RESTART
-     ========================================================== */
-
-  function restartCurrentLevel() {
-
-    hideOverlay(
-      gameOverOverlay
-    );
-
-    hideOverlay(
-      levelCompleteOverlay
-    );
-
-    hideOverlay(
-      pauseOverlay
-    );
-
-    isPaused = false;
-
-    createLevel(
-      currentLevel
-    );
-  }
-
-
-  /* ==========================================================
-     PAUSE
-     ========================================================== */
-
-  function pauseGame() {
-
-    if (
-      gameOver ||
-      levelComplete
-    ) {
-      return;
-    }
-
-    isPaused = true;
-
-    showOverlay(
-      pauseOverlay
-    );
-  }
-
-
-  function resumeGame() {
-
-    isPaused = false;
-
-    hideOverlay(
-      pauseOverlay
-    );
-  }
-
-
-  /* ==========================================================
-     OVERLAY HELPERS
-     ========================================================== */
-
-  function showOverlay(
-    element
-  ) {
-
-    element.classList.remove(
-      "hidden"
-    );
-  }
-
-
-  function hideOverlay(
-    element
-  ) {
-
-    element.classList.add(
-      "hidden"
-    );
-  }
-
-
-  /* ==========================================================
-     NAVIGATION
-     ========================================================== */
-
-  function showScreen(
-    screen
-  ) {
-
-    homeScreen.classList.remove(
-      "active"
-    );
-
-    levelsScreen.classList.remove(
-      "active"
-    );
-
-    gameScreen.classList.remove(
-      "active"
-    );
-
-    screen.classList.add(
-      "active"
-    );
-  }
-
-
-  function openHome() {
-
-    showScreen(
-      homeScreen
-    );
-
-    isPaused = false;
-  }
-
-
-  function openLevels() {
-
-    buildLevels();
-
-    showScreen(
-      levelsScreen
-    );
-
-    isPaused = false;
-  }
-
-
-  function openGame(
-    level
-  ) {
-
-    currentLevel =
-      clamp(
-        Number(level) || 1,
-        1,
-        50
-      );
-
-    saveData.currentLevel =
-      currentLevel;
-
-    saveGame();
-
-    /*
-      Score remains cumulative during
-      the current play session.
-    */
-
-    score =
-      Number(
-        saveData.score || 0
-      );
-
-    createLevel(
-      currentLevel
-    );
-
-    showScreen(
-      gameScreen
-    );
-
-    requestAnimationFrame(
-      () => {
-
-        resizeCanvasForDisplay();
-      }
-    );
-  }
-
-
-  /* ==========================================================
-     LEVEL SELECT
-     ========================================================== */
-
-  function buildLevels() {
-
-    levelsGrid.innerHTML = "";
-
-
-    for (
-      let i = 1;
-      i <= 50;
-      i++
-    ) {
-
-      const button =
-        document.createElement(
-          "button"
+        show(
+          $("levelsScreen")
         );
 
-      button.type =
-        "button";
-
-      button.className =
-        "level-btn";
-
-
-      const unlocked =
-        i <=
-        saveData.unlocked;
-
-      const completed =
-        saveData.completed.includes(
-          i
-        );
-
-
-      if (!unlocked) {
-
-        button.classList.add(
-          "locked"
-        );
-
-        button.disabled =
-          true;
-
-        button.innerHTML =
-          `${i}<br><small>🔒</small>`;
-
-      } else {
-
-        button.textContent =
-          i;
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            initAudio();
-
-            openGame(i);
-          }
-        );
       }
 
-
-      if (
-        i ===
-        saveData.currentLevel
-      ) {
-
-        button.classList.add(
-          "current"
-        );
-      }
-
-
-      if (completed) {
-
-        button.classList.add(
-          "completed"
-        );
-      }
-
-
-      levelsGrid.appendChild(
-        button
-      );
-    }
-  }
-
-
-  /* ==========================================================
-     SOUND
-     ========================================================== */
-
-  function initAudio() {
-
-    if (
-      !soundEnabled
-    ) {
-      return;
-    }
-
-    try {
-
-      if (!audioContext) {
-
-        audioContext =
-          new (
-            window.AudioContext ||
-            window.webkitAudioContext
-          )();
-      }
-
-      if (
-        audioContext.state ===
-        "suspended"
-      ) {
-
-        audioContext.resume();
-      }
-
-    } catch (error) {
-      // Audio unavailable.
-    }
-  }
-
-
-  function tone(
-    frequency,
-    duration,
-    type = "sine",
-    volume = 0.03
-  ) {
-
-    if (
-      !soundEnabled
-    ) {
-      return;
-    }
-
-    try {
-
-      initAudio();
-
-      if (!audioContext) {
-        return;
-      }
-
-      const oscillator =
-        audioContext.createOscillator();
-
-      const gain =
-        audioContext.createGain();
-
-
-      oscillator.type =
-        type;
-
-      oscillator.frequency.value =
-        frequency;
-
-
-      gain.gain.setValueAtTime(
-        0.0001,
-        audioContext.currentTime
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        volume,
-        audioContext.currentTime + 0.015
-      );
-
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        audioContext.currentTime +
-          duration
-      );
-
-
-      oscillator.connect(
-        gain
-      );
-
-      gain.connect(
-        audioContext.destination
-      );
-
-
-      oscillator.start();
-
-      oscillator.stop(
-        audioContext.currentTime +
-          duration +
-          0.02
-      );
-
-    } catch (error) {
-      // Ignore audio errors.
-    }
-  }
-
-
-  function updateSoundButton() {
-
-    soundBtn.textContent =
-      soundEnabled
-        ? "🔊"
-        : "🔇";
-
-    soundBtn.setAttribute(
-      "aria-label",
-      soundEnabled
-        ? "ध्वनि बंद करें"
-        : "ध्वनि चालू करें"
-    );
-  }
-
-
-  /* ==========================================================
-     CANVAS RESIZE
-     ========================================================== */
-
-  function resizeCanvasForDisplay() {
-
-    /*
-      CSS handles visual sizing.
-
-      Keeping the internal canvas at 480x760
-      preserves gameplay geometry.
-    */
-
-    if (
-      canvas.width !== W
-    ) {
-      canvas.width = W;
-    }
-
-    if (
-      canvas.height !== H
-    ) {
-      canvas.height = H;
-    }
-  }
-
-
-  window.addEventListener(
-    "resize",
-    resizeCanvasForDisplay
-  );
+    };
 
 
   /* ==========================================================
      GAME LOOP
-     ========================================================== */
+  ========================================================== */
 
-  function gameLoop(
-    timestamp
-  ) {
+  function loop(time){
 
-    const delta =
+    const dt =
       Math.min(
-        40,
-        timestamp -
-          (lastTime || timestamp)
-      );
-
-    lastTime =
-      timestamp;
-
-
-    if (
-      !isPaused
-    ) {
-
-      if (
-        flyingBubble
-      ) {
-
-        updateFlyingBubble();
-      }
-
-      updateParticles(
-        delta
-      );
-
-      updateFallingBubbles(
-        delta
+        .033,
+        (time-last)/1000 || 0
       );
 
 
-      if (
-        screenShake > 0
-      ) {
+    last = time;
 
-        screenShake *=
-          0.91;
 
-        if (
-          screenShake < 0.2
-        ) {
+    if(
+      !$("gameScreen")
+        .classList
+        .contains("hidden")
+    ){
 
-          screenShake = 0;
-        }
-      }
+      update(dt);
+
+      draw();
+
     }
 
 
-    draw();
+    requestAnimationFrame(
+      loop
+    );
 
-
-    animationFrame =
-      requestAnimationFrame(
-        gameLoop
-      );
   }
 
 
   /* ==========================================================
-     BUTTON EVENTS
-     ========================================================== */
+     START
+  ========================================================== */
 
-  startBtn.addEventListener(
-    "click",
-    () => {
+  renderLevels();
 
-      initAudio();
-
-      openGame(
-        saveData.currentLevel ||
-        1
-      );
-    }
+  show(
+    $("homeScreen")
   );
 
-
-  homeLevelsBtn.addEventListener(
-    "click",
-    () => {
-
-      initAudio();
-
-      openLevels();
-    }
+  requestAnimationFrame(
+    loop
   );
-
-
-  backHomeBtn.addEventListener(
-    "click",
-    () => {
-
-      openHome();
-    }
-  );
-
-
-  gameBackBtn.addEventListener(
-    "click",
-    () => {
-
-      if (
-        !gameOver &&
-        !levelComplete
-      ) {
-
-        saveData.score =
-          score;
-
-        saveData.currentLevel =
-          currentLevel;
-
-        saveGame();
-      }
-
-      openLevels();
-    }
-  );
-
-
-  pauseBtn.addEventListener(
-    "click",
-    () => {
-
-      pauseGame();
-    }
-  );
-
-
-  resumeBtn.addEventListener(
-    "click",
-    () => {
-
-      resumeGame();
-    }
-  );
-
-
-  pauseRestartBtn.addEventListener(
-    "click",
-    () => {
-
-      restartCurrentLevel();
-    }
-  );
-
-
-  soundBtn.addEventListener(
-    "click",
-    () => {
-
-      soundEnabled =
-        !soundEnabled;
-
-      saveData.sound =
-        soundEnabled;
-
-      saveGame();
-
-      updateSoundButton();
-
-      if (
-        soundEnabled
-      ) {
-
-        initAudio();
-
-        tone(
-          560,
-          0.08,
-          "sine",
-          0.025
-        );
-      }
-    }
-  );
-
-
-  gameOverRetryBtn.addEventListener(
-    "click",
-    () => {
-
-      restartCurrentLevel();
-    }
-  );
-
-
-  gameOverLevelsBtn.addEventListener(
-    "click",
-    () => {
-
-      hideOverlay(
-        gameOverOverlay
-      );
-
-      openLevels();
-    }
-  );
-
-
-  nextLevelBtn.addEventListener(
-    "click",
-    () => {
-
-      hideOverlay(
-        levelCompleteOverlay
-      );
-
-      if (
-        currentLevel < 50
-      ) {
-
-        openGame(
-          currentLevel + 1
-        );
-
-      } else {
-
-        openLevels();
-      }
-    }
-  );
-
-
-  completeLevelsBtn.addEventListener(
-    "click",
-    () => {
-
-      hideOverlay(
-        levelCompleteOverlay
-      );
-
-      openLevels();
-    }
-  );
-
-
-  /* ==========================================================
-     KEYBOARD SUPPORT
-     ========================================================== */
-
-  window.addEventListener(
-    "keydown",
-    (event) => {
-
-      if (
-        !gameScreen.classList.contains(
-          "active"
-        )
-      ) {
-        return;
-      }
-
-
-      if (
-        event.key ===
-        "Escape"
-      ) {
-
-        if (
-          isPaused
-        ) {
-
-          resumeGame();
-
-        } else {
-
-          pauseGame();
-        }
-      }
-
-
-      if (
-        event.key ===
-        " "
-      ) {
-
-        event.preventDefault();
-
-        shoot();
-      }
-
-
-      if (
-        event.key ===
-        "ArrowLeft"
-      ) {
-
-        aimAngle -=
-          0.06;
-
-        aimAngle =
-          clamp(
-            aimAngle,
-            -Math.PI + 0.22,
-            -0.22
-          );
-      }
-
-
-      if (
-        event.key ===
-        "ArrowRight"
-      ) {
-
-        aimAngle +=
-          0.06;
-
-        aimAngle =
-          clamp(
-            aimAngle,
-            -Math.PI + 0.22,
-            -0.22
-          );
-      }
-    }
-  );
-
-
-  /* ==========================================================
-     INITIALIZATION
-     ========================================================== */
-
-  soundEnabled =
-    saveData.sound !== false;
-
-  updateSoundButton();
-
-  score =
-    Number(
-      saveData.score || 0
-    );
-
-  currentLevel =
-    clamp(
-      Number(
-        saveData.currentLevel ||
-        1
-      ),
-      1,
-      50
-    );
-
-  /*
-    Generate level only when game opens.
-  */
-
-  buildLevels();
-
-  showScreen(
-    homeScreen
-  );
-
-  resizeCanvasForDisplay();
-
-  animationFrame =
-    requestAnimationFrame(
-      gameLoop
-    );
 
 })();
