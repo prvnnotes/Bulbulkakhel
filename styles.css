@@ -1,7 +1,7 @@
-/* ============================================================
-   बुलबुले का खेल
-   PREMIUM MITHILA / MADHUBANI STYLE
-   ============================================================ */
+/* =========================================================
+   बुलबुले का खेल — Mithila Bubble Shooter
+   Premium Mobile-First UI
+   ========================================================= */
 
 * {
   box-sizing: border-box;
@@ -10,541 +10,207 @@
 
 html,
 body {
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
-  min-height: 100%;
+  overflow: hidden;
 }
 
 body {
-  background:
-    radial-gradient(
-      circle at 50% 10%,
-      #294d7d 0%,
-      #142f59 28%,
-      #081a35 72%,
-      #06142a 100%
-    );
-
-  color: #f2f5fa;
-
   font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
     "Noto Sans Devanagari",
     "Nirmala UI",
+    "Mangal",
+    system-ui,
     sans-serif;
 
-  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% 15%, #1d4678 0%, #102d56 32%, #071a34 100%);
+
+  color: #f7f1df;
+  overscroll-behavior: none;
 }
 
 button {
-  font-family: inherit;
+  font: inherit;
 }
 
-button:focus {
-  outline: none;
+button,
+canvas {
+  touch-action: manipulation;
 }
 
 .hidden {
   display: none !important;
 }
 
+/* =========================================================
+   APP / SCREENS
+   ========================================================= */
+
 .app {
   width: 100%;
-  max-width: 620px;
-  min-height: 100vh;
-  margin: 0 auto;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
-
-
-/* ============================================================
-   SCREEN
-   ============================================================ */
 
 .screen {
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   position: relative;
-  min-height: 100vh;
 }
 
-
-/* ============================================================
-   COMMON BUTTON
-   ============================================================ */
-
-.icon-btn {
-
-  width: 44px;
-  height: 44px;
-
-  flex: 0 0 44px;
-
-  border-radius: 14px;
-
-  border: 1px solid
-    rgba(220, 233, 249, 0.18);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.105),
-      rgba(255, 255, 255, 0.035)
-    );
-
-  color: #eef5ff;
-
-  font-size: 21px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-
-  box-shadow:
-    inset 0 1px
-      rgba(255, 255, 255, 0.08),
-
-    0 8px 22px
-      rgba(0, 0, 0, 0.18);
-
-  transition:
-    transform 0.16s ease,
-    background 0.16s ease;
-}
-
-.icon-btn:hover {
-  background:
-    rgba(255, 255, 255, 0.12);
-}
-
-.icon-btn:active {
-  transform: scale(0.93);
-}
-
-
-/* ============================================================
-   HOME SCREEN
-   ============================================================ */
+/* =========================================================
+   HOME
+   ========================================================= */
 
 .home-screen {
-
-  min-height: 100vh;
-
-  padding:
-    70px 18px
-    65px;
-
   display: flex;
-
-  flex-direction: column;
-
   align-items: center;
-
   justify-content: center;
-
-  overflow: hidden;
-
+  padding: 22px;
   background:
-
-    radial-gradient(
-      circle at 50% 20%,
-      rgba(74, 123, 183, 0.38),
-      transparent 32%
-    ),
-
-    radial-gradient(
-      circle at 10% 80%,
-      rgba(205, 169, 92, 0.08),
-      transparent 28%
-    ),
-
-    linear-gradient(
-      145deg,
-      #17345f,
-      #0d2345 48%,
-      #07172e
-    );
+    radial-gradient(circle at 50% 35%, rgba(50, 105, 170, 0.42), transparent 40%),
+    linear-gradient(180deg, #102f59 0%, #081b35 100%);
 }
-
-
-/* ============================================================
-   MITHILA BORDERS
-   ============================================================ */
-
-.mithila-border {
-
-  position: absolute;
-
-  left: 50%;
-
-  transform: translateX(-50%);
-
-  width: min(520px, 94%);
-
-  display: flex;
-
-  justify-content: space-around;
-
-  align-items: center;
-
-  color: #d3b66e;
-
-  opacity: 0.6;
-
-  font-size: 17px;
-
-  pointer-events: none;
-}
-
-.top-border {
-  top: 17px;
-}
-
-.bottom-border {
-  bottom: 17px;
-}
-
-
-/* ============================================================
-   HOME DECORATIONS
-   ============================================================ */
-
-.home-decoration {
-
-  position: absolute;
-
-  z-index: 1;
-
-  font-size: 95px;
-
-  opacity: 0.055;
-
-  pointer-events: none;
-
-  filter:
-    saturate(0.8);
-}
-
-.peacock-left {
-
-  left: -28px;
-
-  top: 25%;
-
-  transform:
-    rotate(-8deg);
-}
-
-.peacock-right {
-
-  right: -28px;
-
-  bottom: 22%;
-
-  transform:
-    scaleX(-1)
-    rotate(-8deg);
-}
-
-
-/* ============================================================
-   HOME CARD
-   ============================================================ */
 
 .home-card {
-
-  position: relative;
-
-  z-index: 5;
-
-  width: min(440px, 94vw);
-
-  padding:
-    34px 25px
-    31px;
+  width: min(440px, 92vw);
+  padding: 34px 30px 30px;
 
   text-align: center;
 
-  border-radius: 32px;
-
-  border:
-    1px solid
-    rgba(226, 233, 242, 0.17);
+  border: 1px solid rgba(183, 211, 239, 0.24);
+  border-radius: 26px;
 
   background:
-
     linear-gradient(
       145deg,
-      rgba(30, 62, 105, 0.96),
-      rgba(9, 27, 54, 0.97)
+      rgba(37, 77, 124, 0.78),
+      rgba(8, 28, 55, 0.93)
     );
 
   box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
-    0 38px 95px
-      rgba(0, 0, 0, 0.43),
-
-    inset 0 1px
-      rgba(255, 255, 255, 0.10),
-
-    inset 0 -1px
-      rgba(0, 0, 0, 0.22);
-
-  backdrop-filter:
-    blur(16px);
+  backdrop-filter: blur(12px);
 }
 
-
-/* ============================================================
-   BUBBLE LOGO
-   ============================================================ */
-
 .brand-mark {
-
-  width: 108px;
-  height: 108px;
-
-  margin:
-    0 auto
-    18px;
-
-  position: relative;
-
-  border-radius: 50%;
-
-  background:
-
-    radial-gradient(
-      circle,
-      rgba(121, 168, 219, 0.25),
-      rgba(121, 168, 219, 0.04) 65%,
-      transparent 72%
-    );
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 72px;
+  margin-bottom: 10px;
 }
 
 .brand-bubble {
-
-  position: absolute;
-
-  width: 48px;
-  height: 48px;
-
+  width: 43px;
+  height: 43px;
   border-radius: 50%;
+  margin: 0 -5px;
 
   box-shadow:
-
-    inset 5px 4px 8px
-      rgba(255, 255, 255, 0.63),
-
-    inset -7px -8px 11px
-      rgba(0, 0, 0, 0.24),
-
-    0 8px 18px
-      rgba(0, 0, 0, 0.26);
-}
-
-.brand-bubble:nth-child(1) {
-  left: 5px;
-  top: 38px;
-}
-
-.brand-bubble:nth-child(2) {
-  left: 30px;
-  top: 10px;
-}
-
-.brand-bubble:nth-child(3) {
-  left: 58px;
-  top: 39px;
+    inset 7px 7px 10px rgba(255, 255, 255, 0.38),
+    inset -7px -8px 12px rgba(0, 0, 0, 0.2),
+    0 7px 15px rgba(0, 0, 0, 0.25);
 }
 
 .bubble-red {
-
-  background:
-
-    radial-gradient(
-      circle at 30% 25%,
-      #ffffff 0%,
-      #ffb0b7 16%,
-      #dc596b 52%,
-      #8c2539 100%
-    );
+  background: radial-gradient(circle at 30% 25%, #ffb0b0, #dc4e61 48%, #9f2439);
 }
 
 .bubble-yellow {
-
-  background:
-
-    radial-gradient(
-      circle at 30% 25%,
-      #ffffff 0%,
-      #fff3ad 16%,
-      #dfc452 52%,
-      #94751d 100%
-    );
+  background: radial-gradient(circle at 30% 25%, #fff4ad, #e6c447 48%, #aa7f1d);
 }
 
 .bubble-green {
-
-  background:
-
-    radial-gradient(
-      circle at 30% 25%,
-      #ffffff 0%,
-      #bdeccc 16%,
-      #60ad78 52%,
-      #275e43 100%
-    );
+  background: radial-gradient(circle at 30% 25%, #b4e7bc, #56a56a 48%, #27633a);
 }
 
-
-/* ============================================================
-   HOME TEXT
-   ============================================================ */
-
 .mini-mithila {
-
-  color: #d6b86d;
-
-  font-size: 17px;
-
-  letter-spacing: 1px;
-
-  opacity: 0.92;
+  font-size: 15px;
+  opacity: 0.82;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
 }
 
 .eyebrow {
-
-  margin:
-    17px 0
-    5px;
-
-  color: #d7bb78;
-
-  font-size: 11px;
-
-  font-weight: 700;
-
-  letter-spacing: 2px;
-
-  text-transform: uppercase;
+  margin: 0 0 4px;
+  color: #e5c878;
+  font-size: 12px;
 }
 
 .home-card h1 {
-
   margin: 0;
 
-  color: #f4f6f9;
-
-  font-size:
-    clamp(
-      31px,
-      8vw,
-      42px
-    );
-
+  font-size: clamp(30px, 8vw, 44px);
   line-height: 1.15;
 
-  letter-spacing: -1px;
+  color: #fff8e8;
 
-  text-shadow:
-    0 4px 20px
-    rgba(0, 0, 0, 0.22);
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
 }
 
 .home-subtitle {
-
-  margin:
-    11px 0
-    20px;
-
-  color: #b8cbe2;
-
+  margin: 10px 0 18px;
+  color: #b9c9dd;
   font-size: 14px;
-
-  line-height: 1.7;
 }
 
 .made-for {
+  margin: 0 auto 18px;
+  padding: 8px 12px;
 
-  margin-bottom: 17px;
+  border-radius: 10px;
+  border: 1px solid rgba(224, 195, 111, 0.22);
 
-  padding:
-    12px 15px;
+  background: rgba(255, 255, 255, 0.05);
 
-  border-radius: 15px;
-
-  border:
-    1px solid
-    rgba(216, 184, 108, 0.14);
-
-  background:
-    rgba(214, 181, 96, 0.07);
-
-  color: #e3ce99;
-
-  font-size: 13px;
+  color: #dfcf9b;
+  font-size: 11px;
 }
 
 .made-for span {
-  margin-right: 5px;
+  margin-right: 6px;
 }
 
-
-/* ============================================================
-   MAIN BUTTON
-   ============================================================ */
+.main-btn,
+.ghost-btn {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
 
 .main-btn {
-
-  width: 100%;
-
-  padding:
-    15px 18px;
-
-  border: 0;
-
-  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
 
   background:
+    linear-gradient(180deg, #79afe6 0%, #467db9 100%);
 
-    linear-gradient(
-      135deg,
-      #7eafe3 0%,
-      #4b78b1 50%,
-      #345d91 100%
-    );
-
-  color: #ffffff;
-
-  font-size: 16px;
-
-  font-weight: 800;
-
-  cursor: pointer;
+  color: white;
+  font-weight: 700;
 
   box-shadow:
-
-    0 12px 28px
-      rgba(41, 86, 142, 0.35),
-
-    inset 0 1px
-      rgba(255, 255, 255, 0.27),
-
-    inset 0 -1px
-      rgba(0, 0, 0, 0.15);
-
-  transition:
-    transform 0.16s ease,
-    filter 0.16s ease;
+    0 8px 20px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .main-btn:hover {
-  filter: brightness(1.07);
+  filter: brightness(1.08);
 }
 
-.main-btn:active {
+.main-btn:active,
+.ghost-btn:active,
+.icon-btn:active,
+.modal-btn:active {
   transform: scale(0.97);
 }
 
@@ -552,1188 +218,945 @@ button:focus {
   margin-right: 7px;
 }
 
-
-/* ============================================================
-   GHOST BUTTON
-   ============================================================ */
-
 .ghost-btn {
+  margin-top: 9px;
 
+  border: 1px solid rgba(166, 196, 227, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+
+  color: #dce7f2;
+}
+
+.mithila-border {
+  position: absolute;
+  left: 0;
   width: 100%;
 
-  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: clamp(12px, 4vw, 30px);
 
-  padding: 13px;
+  color: #d6b75d;
+  opacity: 0.65;
 
-  border-radius: 15px;
-
-  border:
-    1px solid
-    rgba(190, 215, 242, 0.17);
-
-  background:
-    rgba(255, 255, 255, 0.055);
-
-  color: #dce9f8;
-
-  font-size: 14px;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  transition:
-    background 0.16s ease,
-    transform 0.16s ease;
+  pointer-events: none;
 }
 
-.ghost-btn:hover {
-  background:
-    rgba(255, 255, 255, 0.085);
+.top-border {
+  top: 10px;
 }
 
-.ghost-btn:active {
-  transform: scale(0.97);
+.bottom-border {
+  bottom: 10px;
 }
 
+.home-decoration {
+  position: absolute;
+  opacity: 0.12;
+  font-size: 90px;
+  pointer-events: none;
+}
 
-/* ============================================================
-   LEVEL SCREEN
-   ============================================================ */
+.peacock-left {
+  left: 5%;
+  top: 24%;
+}
+
+.peacock-right {
+  right: 5%;
+  bottom: 22%;
+  transform: scaleX(-1);
+}
+
+/* =========================================================
+   LEVELS
+   ========================================================= */
 
 .levels-screen {
-
-  min-height: 100vh;
-
-  padding:
-    20px 16px
-    30px;
+  padding: 18px;
+  overflow-y: auto;
 
   background:
-
-    radial-gradient(
-      circle at 50% 0%,
-      rgba(67, 111, 165, 0.34),
-      transparent 33%
-    ),
-
-    linear-gradient(
-      180deg,
-      #102b52,
-      #091b35
-    );
+    radial-gradient(circle at 50% 0%, #224b7c 0%, transparent 42%),
+    #081b35;
 }
 
 .page-header {
-
   display: flex;
-
   align-items: center;
+  gap: 14px;
+  max-width: 700px;
+  margin: 0 auto;
+}
 
-  gap: 13px;
+.icon-btn {
+  flex: 0 0 auto;
+
+  width: 48px;
+  height: 48px;
+
+  border-radius: 14px;
+
+  border: 1px solid rgba(188, 211, 237, 0.22);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(76, 119, 168, 0.45),
+      rgba(17, 43, 78, 0.8)
+    );
+
+  color: #e9f0f7;
+
+  font-size: 25px;
+  cursor: pointer;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 7px 18px rgba(0, 0, 0, 0.18);
 }
 
 .page-heading {
-
   display: flex;
-
   align-items: center;
-
   gap: 10px;
 }
 
 .heading-ornament {
-
   font-size: 26px;
-
-  filter:
-    drop-shadow(
-      0 4px 8px
-      rgba(0, 0, 0, 0.2)
-    );
 }
 
 .page-heading h2 {
-
   margin: 0;
-
-  font-size: 23px;
-
-  color: #eef4fc;
+  font-size: 25px;
 }
 
 .page-heading p {
-
-  margin:
-    3px 0
-    0;
-
-  color: #9db4d0;
-
+  margin: 2px 0 0;
+  color: #aebfd3;
   font-size: 12px;
 }
 
-
-/* ============================================================
-   LEVEL DECORATION
-   ============================================================ */
-
 .level-pattern {
-
-  margin:
-    18px 0;
-
-  padding:
-    11px 5px;
+  max-width: 700px;
+  margin: 16px auto;
 
   text-align: center;
+  color: #d9bb67;
 
-  color: #c9ad69;
-
-  font-size: 14px;
-
-  opacity: 0.75;
-
-  border-top:
-    1px solid
-    rgba(204, 173, 102, 0.16);
-
-  border-bottom:
-    1px solid
-    rgba(204, 173, 102, 0.16);
+  opacity: 0.65;
+  letter-spacing: 4px;
 }
 
-
-/* ============================================================
-   LEVEL GRID
-   ============================================================ */
-
 .levels-grid {
-
-  width: 100%;
-
-  max-width: 510px;
-
-  margin: auto;
+  width: min(700px, 100%);
+  margin: 0 auto;
 
   display: grid;
-
-  grid-template-columns:
-    repeat(5, 1fr);
-
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
-.level-btn {
+.level-card {
+  min-height: 65px;
 
-  position: relative;
+  border-radius: 15px;
 
-  aspect-ratio: 1;
-
-  border-radius: 17px;
-
-  border:
-    1px solid
-    rgba(190, 215, 241, 0.14);
+  border: 1px solid rgba(180, 207, 236, 0.18);
 
   background:
-
     linear-gradient(
       145deg,
-      rgba(255, 255, 255, 0.09),
-      rgba(255, 255, 255, 0.035)
+      rgba(39, 79, 126, 0.75),
+      rgba(12, 34, 64, 0.9)
     );
 
-  color: #eaf2fc;
-
-  font-size: 18px;
-
-  font-weight: 800;
+  color: #edf4fb;
 
   cursor: pointer;
-
-  box-shadow:
-
-    inset 0 1px
-      rgba(255, 255, 255, 0.06),
-
-    0 5px 13px
-      rgba(0, 0, 0, 0.08);
-
-  transition:
-    transform 0.15s ease,
-    background 0.15s ease;
 }
 
-.level-btn.open:hover {
-
-  background:
-    rgba(113, 157, 208, 0.15);
-
-  transform:
-    translateY(-2px);
+.level-card.locked {
+  opacity: 0.4;
 }
 
-.level-btn.open:active {
-  transform: scale(0.95);
-}
-
-.level-btn.done {
-
-  border-color:
-    rgba(215, 183, 102, 0.48);
-
-  background:
-
-    linear-gradient(
-      145deg,
-      rgba(215, 183, 102, 0.17),
-      rgba(255, 255, 255, 0.045)
-    );
-}
-
-.level-btn.locked {
-
-  opacity: 0.34;
-
-  cursor: not-allowed;
-}
-
-.level-star {
-
-  position: absolute;
-
-  top: 3px;
-  right: 5px;
-
-  font-size: 10px;
+.level-card.current {
+  border-color: rgba(225, 196, 103, 0.65);
 }
 
 .levels-footer {
-
-  margin:
-    25px auto
-    0;
-
   text-align: center;
-
-  color: #7f99b9;
-
-  font-size: 11px;
+  padding: 24px 0;
+  color: #8096af;
+  font-size: 12px;
 }
 
-
-/* ============================================================
+/* =========================================================
    GAME SCREEN
-   ============================================================ */
+   IMPORTANT:
+   The game uses a strict viewport layout.
+   No scrolling on mobile.
+   ========================================================= */
 
 .game-screen {
+  display: grid;
 
-  min-height: 100vh;
+  grid-template-rows:
+    auto
+    auto
+    minmax(0, 1fr)
+    auto
+    auto;
+
+  gap: 0;
 
   padding:
-    10px 12px
-    15px;
+    max(7px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(5px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
 
   background:
-
-    radial-gradient(
-      circle at 50% 5%,
-      rgba(64, 107, 163, 0.36),
-      transparent 29%
-    ),
-
-    linear-gradient(
-      180deg,
-      #102a50,
-      #081a34
-    );
+    radial-gradient(circle at 50% 18%, #244f82 0%, transparent 35%),
+    linear-gradient(180deg, #102c55 0%, #081b35 100%);
 }
 
-
-/* ============================================================
+/* =========================================================
    GAME HEADER
-   ============================================================ */
+   ========================================================= */
 
 .game-header {
+  width: 100%;
 
-  height: 54px;
-
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px 44px;
+  gap: 6px;
 
   align-items: center;
 
-  gap: 8px;
+  min-height: 50px;
+}
+
+.game-header .icon-btn {
+  width: 44px;
+  height: 44px;
+
+  border-radius: 13px;
+  font-size: 22px;
 }
 
 .game-heading {
-
-  flex: 1;
-
   text-align: center;
+  line-height: 1.05;
 }
 
 .small-label {
-
   display: block;
 
-  margin-bottom: 1px;
-
-  color: #8fa8c7;
-
-  font-size: 9px;
-
-  letter-spacing: 1.5px;
-
-  text-transform: uppercase;
+  color: #a7bad0;
+  font-size: 10px;
+  margin-bottom: 2px;
 }
 
 .game-heading strong {
-
-  color: #f0f5fc;
-
-  font-size: 18px;
+  font-size: 20px;
+  color: #f8f1dd;
 }
 
-
-/* ============================================================
-   SCORE ROW
-   ============================================================ */
+/* =========================================================
+   SCORE
+   ========================================================= */
 
 .score-row {
-
   display: grid;
+  grid-template-columns: 1fr 1.35fr 1fr;
 
-  grid-template-columns:
-    1fr
-    1.18fr
-    1fr;
+  gap: 7px;
 
-  gap: 8px;
-
-  margin:
-    8px 0;
+  padding: 6px 4px;
 }
 
 .stat-card,
 .pressure-card {
+  min-height: 54px;
 
-  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 
   border-radius: 15px;
 
-  border:
-    1px solid
-    rgba(190, 215, 242, 0.13);
+  border: 1px solid rgba(188, 211, 237, 0.17);
 
   background:
-    rgba(255, 255, 255, 0.055);
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: center;
-
-  justify-content: center;
+    linear-gradient(
+      145deg,
+      rgba(47, 87, 137, 0.55),
+      rgba(16, 41, 75, 0.8)
+    );
 
   box-shadow:
-    inset 0 1px
-      rgba(255, 255, 255, 0.045);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .stat-card span,
 .pressure-card > span {
-
-  color: #8fa7c5;
-
   font-size: 10px;
+  color: #9eb1c7;
 }
 
 .stat-card strong {
-
   margin-top: 2px;
-
-  color: #f0f5fc;
-
-  font-size: 17px;
+  font-size: 19px;
 }
 
-
-/* ============================================================
-   PRESSURE DOTS
-   ============================================================ */
-
 .pressure-dots {
-
   display: flex;
-
   gap: 5px;
-
   margin-top: 7px;
 }
 
 .pressure-dots i {
-
-  width: 7px;
-  height: 7px;
-
-  border-radius: 50%;
-
-  background:
-    rgba(166, 194, 224, 0.32);
-
-  box-shadow:
-    inset 0 1px
-      rgba(255, 255, 255, 0.2);
-}
-
-
-/* ============================================================
-   BOARD SHELL
-   ============================================================ */
-
-.board-shell {
-
-  position: relative;
-
-  width: 100%;
-
-  border-radius: 27px;
-
-  padding: 2px;
-
-  background:
-
-    linear-gradient(
-      145deg,
-      rgba(219, 199, 147, 0.35),
-      rgba(120, 164, 213, 0.20),
-      rgba(255, 255, 255, 0.08)
-    );
-
-  box-shadow:
-
-    0 25px 55px
-      rgba(0, 0, 0, 0.34),
-
-    0 0 0 1px
-      rgba(255, 255, 255, 0.025);
-}
-
-.board-inner {
-
-  position: relative;
-
-  width: 100%;
-
-  overflow: hidden;
-
-  border-radius: 25px;
-
-  background:
-    #102b53;
-}
-
-.board-inner::before {
-
-  content: "";
-
-  position: absolute;
-
-  inset: 0;
-
-  pointer-events: none;
-
-  background:
-
-    radial-gradient(
-      circle at 50% 0%,
-      rgba(130, 174, 223, 0.16),
-      transparent 35%
-    );
-
-  z-index: 1;
-}
-
-.board-inner::after {
-
-  content: "";
-
-  position: absolute;
-
-  inset: 10px;
-
-  border:
-    1px solid
-    rgba(213, 191, 130, 0.11);
-
-  border-radius: 19px;
-
-  pointer-events: none;
-
-  z-index: 5;
-}
-
-
-/* ============================================================
-   CANVAS
-   ============================================================ */
-
-#gameCanvas {
+  width: 10px;
+  height: 10px;
 
   display: block;
 
-  width: 100%;
+  border-radius: 50%;
 
-  height: auto;
+  background: rgba(174, 199, 226, 0.28);
 
-  position: relative;
-
-  z-index: 2;
-
-  touch-action: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+/* =========================================================
+   BOARD
+   ========================================================= */
 
-/* ============================================================
-   BOARD MITHILA MOTIFS
-   ============================================================ */
+.board-shell {
+  min-height: 0;
+
+  width: 100%;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  overflow: hidden;
+
+  padding: 4px 0;
+}
+
+.board-inner {
+  position: relative;
+
+  height: 100%;
+  width: min(
+    100%,
+    calc((100dvh - 220px) * 0.631578)
+  );
+
+  aspect-ratio: 480 / 760;
+
+  max-width: 480px;
+  max-height: 100%;
+
+  border-radius: 27px;
+
+  overflow: hidden;
+
+  border: 2px solid rgba(189, 216, 241, 0.2);
+
+  background:
+    radial-gradient(
+      circle at 50% 15%,
+      rgba(57, 104, 158, 0.35),
+      transparent 38%
+    ),
+    #182f59;
+
+  box-shadow:
+    0 18px 35px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+#gameCanvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  max-width: 100%;
+  max-height: 100%;
+
+  border-radius: inherit;
+}
+
+/* =========================================================
+   BOARD MOTIFS
+   ========================================================= */
 
 .board-motif {
-
   position: absolute;
+  z-index: 1;
 
-  z-index: 3;
-
-  color: #d4b66e;
+  pointer-events: none;
 
   opacity: 0.075;
 
-  pointer-events: none;
-
-  user-select: none;
-
-  filter:
-    grayscale(.1);
+  filter: saturate(0.8);
 }
 
 .motif-one {
-
   left: 12px;
-
-  top: 105px;
-
-  font-size: 38px;
+  bottom: 130px;
+  font-size: 70px;
 }
 
 .motif-two {
-
   right: 10px;
-
-  top: 235px;
-
-  font-size: 34px;
-
-  transform:
-    scaleX(-1);
+  top: 220px;
+  font-size: 58px;
 }
 
 .motif-three {
-
-  left: 11px;
-
-  bottom: 165px;
-
-  font-size: 47px;
+  right: 13px;
+  bottom: 210px;
+  font-size: 65px;
 }
 
 .motif-four {
-
-  right: 13px;
-
-  bottom: 55px;
-
-  font-size: 36px;
+  left: 12px;
+  top: 120px;
+  font-size: 48px;
 }
 
-
-/* ============================================================
+/* =========================================================
    GAME MESSAGE
-   ============================================================ */
+   ========================================================= */
 
 .game-message {
-
   position: absolute;
 
-  left: 12px;
-  right: 12px;
-
+  left: 50%;
   bottom: 12px;
 
-  z-index: 8;
+  transform: translateX(-50%);
 
-  min-height: 34px;
+  z-index: 10;
 
-  display: flex;
+  width: calc(100% - 28px);
 
-  align-items: center;
+  padding: 9px 12px;
 
-  justify-content: center;
+  text-align: center;
 
-  padding:
-    7px 12px;
+  border-radius: 14px;
 
-  border-radius: 12px;
+  background: rgba(5, 20, 42, 0.86);
 
-  border:
-    1px solid
-    rgba(188, 213, 240, 0.09);
+  border: 1px solid rgba(187, 211, 238, 0.12);
 
-  background:
-    rgba(5, 17, 35, 0.70);
-
-  color: #dce9f8;
-
-  font-size: 12px;
-
-  font-weight: 700;
-
-  backdrop-filter:
-    blur(7px);
-
-  pointer-events: none;
-}
-
-
-/* ============================================================
-   CURRENT / NEXT AREA
-   ============================================================ */
-
-.bubble-controls {
-
-  width: 100%;
-
-  margin-top: 10px;
-
-  display: grid;
-
-  grid-template-columns:
-    1fr
-    .72fr
-    1fr;
-
-  gap: 8px;
-
-  align-items: center;
-}
-
-
-/* ============================================================
-   PREVIEW BOX
-   ============================================================ */
-
-.bubble-preview {
-
-  min-height: 62px;
-
-  padding:
-    8px 10px;
-
-  border-radius: 17px;
-
-  border:
-    1px solid
-    rgba(196, 218, 241, 0.14);
-
-  background:
-
-    linear-gradient(
-      145deg,
-      rgba(255,255,255,.085),
-      rgba(255,255,255,.035)
-    );
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  gap: 10px;
-
-  box-shadow:
-    inset 0 1px
-      rgba(255,255,255,.06);
-}
-
-.preview-text {
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: flex-end;
-}
-
-.preview-text span {
-
-  color: #e7eef8;
+  color: #f2ead7;
 
   font-size: 13px;
 
-  font-weight: 800;
+  pointer-events: none;
+
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+/* =========================================================
+   BUBBLE CONTROLS
+   ========================================================= */
+
+.bubble-controls {
+  width: 100%;
+
+  min-height: 64px;
+
+  display: grid;
+
+  grid-template-columns: 1fr 72px 1fr;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 3px 4px;
+}
+
+.bubble-preview {
+  min-height: 58px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border-radius: 15px;
+
+  border: 1px solid rgba(179, 207, 234, 0.15);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(40, 79, 126, 0.55),
+      rgba(10, 31, 59, 0.75)
+    );
+}
+
+.preview-text {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+
+  color: #b6c8db;
+
+  font-size: 10px;
+}
+
+.preview-text span {
+  color: #e9dfc5;
+  font-size: 12px;
 }
 
 .preview-text small {
-
-  margin-top: 1px;
-
-  color: #829bb9;
-
+  color: #849bb4;
   font-size: 9px;
 }
 
-
-/* ============================================================
-   PREVIEW BUBBLE
-   ============================================================ */
-
 .preview-bubble {
-
-  width: 36px;
-  height: 36px;
-
-  flex: 0 0 36px;
+  width: 38px;
+  height: 38px;
 
   border-radius: 50%;
 
   box-shadow:
-
-    inset 5px 4px 7px
-      rgba(255,255,255,.60),
-
-    inset -6px -7px 9px
-      rgba(0,0,0,.24),
-
-    0 6px 12px
-      rgba(0,0,0,.23);
+    inset 6px 6px 9px rgba(255, 255, 255, 0.32),
+    inset -6px -7px 10px rgba(0, 0, 0, 0.2),
+    0 5px 10px rgba(0, 0, 0, 0.2);
 }
 
 .preview-bubble.small {
-
-  width: 29px;
-  height: 29px;
-
-  flex-basis: 29px;
+  width: 31px;
+  height: 31px;
 }
-
-
-/* ============================================================
-   CURRENT BUBBLE SUBTLE FLOAT
-   ============================================================ */
-
-.current-preview .preview-bubble {
-
-  animation:
-    previewFloat
-    2.2s
-    ease-in-out
-    infinite;
-}
-
-@keyframes previewFloat {
-
-  0%,
-  100% {
-    transform:
-      translateY(0);
-  }
-
-  50% {
-    transform:
-      translateY(-3px);
-  }
-}
-
-
-/* ============================================================
-   MINI CANNON INDICATOR
-   ============================================================ */
 
 .cannon-mini {
-
-  min-height: 62px;
-
-  border-radius: 17px;
-
-  border:
-    1px solid
-    rgba(202, 178, 111, 0.16);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(199, 170, 95, 0.08),
-      rgba(255,255,255,.035)
-    );
-
-  color: #bda467;
+  height: 54px;
 
   display: flex;
-
   flex-direction: column;
-
   align-items: center;
-
   justify-content: center;
 
-  gap: 1px;
+  border-radius: 15px;
 
-  font-size: 10px;
+  color: #d5dfeb;
 
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.035);
 
-  text-align: center;
+  font-size: 9px;
 }
 
 .cannon-arrow {
-
-  color: #d7bb78;
-
-  font-size: 21px;
-
-  line-height: 19px;
-
-  animation:
-    aimFloat
-    1.6s
-    ease-in-out
-    infinite;
+  font-size: 19px;
+  line-height: 16px;
+  color: #d9bc67;
 }
 
-@keyframes aimFloat {
-
-  0%,
-  100% {
-    transform:
-      translateY(0);
-  }
-
-  50% {
-    transform:
-      translateY(-3px);
-  }
-}
-
-
-/* ============================================================
+/* =========================================================
    BOTTOM HINT
-   ============================================================ */
+   ========================================================= */
 
 .bottom-hint {
+  min-height: 24px;
 
-  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  text-align: center;
+  padding: 2px 4px;
 
-  color: #718cab;
+  color: #8399b2;
 
   font-size: 9px;
-
-  line-height: 1.5;
+  text-align: center;
 }
 
-
-/* ============================================================
-   MODAL
-   ============================================================ */
+/* =========================================================
+   MODALS
+   ========================================================= */
 
 .modal-overlay {
-
-  position: fixed;
+  position: absolute;
 
   inset: 0;
 
   z-index: 100;
 
   display: flex;
-
   align-items: center;
-
   justify-content: center;
 
   padding: 20px;
 
-  background:
-    rgba(3, 11, 25, 0.72);
+  background: rgba(2, 12, 27, 0.72);
 
-  backdrop-filter:
-    blur(7px);
+  backdrop-filter: blur(6px);
 }
 
 .modal-card {
+  width: min(390px, 92vw);
 
-  width: min(390px, 94vw);
-
-  padding: 25px 22px;
+  padding: 27px 22px;
 
   text-align: center;
 
-  border-radius: 25px;
+  border-radius: 22px;
 
-  border:
-    1px solid
-    rgba(208, 225, 244, 0.19);
+  border: 1px solid rgba(191, 216, 240, 0.2);
 
   background:
-
     linear-gradient(
       145deg,
-      #193761,
-      #0b203f
+      #244a78,
+      #0d2749
     );
 
   box-shadow:
-
-    0 30px 75px
-      rgba(0, 0, 0, 0.48),
-
-    inset 0 1px
-      rgba(255,255,255,.08);
+    0 25px 70px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .modal-symbol {
-
-  font-size: 40px;
-
-  margin-bottom: 4px;
+  font-size: 30px;
+  margin-bottom: 5px;
 }
 
 .modal-card h2 {
-
-  margin:
-    5px 0 7px;
-
-  color: #f0f4fa;
-
-  font-size: 23px;
-}
-
-.modal-card p {
-
-  margin:
-    0 0 16px;
-
-  color: #aebfd5;
-
-  font-size: 13px;
-
-  line-height: 1.6;
+  margin: 5px 0 18px;
 }
 
 .modal-btn {
-
   width: 100%;
+  min-height: 44px;
 
   margin-top: 9px;
 
-  padding: 13px;
+  border-radius: 11px;
 
-  border-radius: 14px;
+  border: 1px solid rgba(185, 210, 235, 0.18);
 
-  border:
-    1px solid
-    rgba(188, 214, 241, 0.14);
+  background: rgba(255, 255, 255, 0.06);
 
-  background:
-    rgba(255,255,255,.065);
-
-  color: #e4edf9;
-
-  font-weight: 700;
+  color: #e9f0f7;
 
   cursor: pointer;
 }
 
 .danger-btn {
-
-  color: #e99ba4;
-
-  border-color:
-    rgba(233, 125, 138, .16);
-
-  background:
-    rgba(233, 125, 138, .055);
-}
-
-
-/* ============================================================
-   RESULT
-   ============================================================ */
-
-.result-card {
-
-  padding-top: 29px;
+  color: #ffb6b6;
+  border-color: rgba(238, 111, 111, 0.22);
 }
 
 .result-icon {
+  font-size: 38px;
+}
 
-  font-size: 52px;
-
-  margin-bottom: 5px;
-
-  filter:
-    drop-shadow(
-      0 7px 15px
-      rgba(0,0,0,.25)
-    );
+.result-card p {
+  color: #b8c8da;
 }
 
 .final-score {
+  margin: 17px 0;
 
-  margin:
-    15px 0;
+  padding: 12px;
 
-  padding:
-    11px;
+  border-radius: 13px;
 
-  border-radius: 15px;
-
-  border:
-    1px solid
-    rgba(216, 184, 108, .14);
-
-  background:
-    rgba(214,181,96,.065);
-
-  display: flex;
-
-  flex-direction: column;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .final-score span {
-
-  color: #8fa8c5;
-
-  font-size: 10px;
+  display: block;
+  color: #9eb1c7;
+  font-size: 11px;
 }
 
 .final-score strong {
-
-  margin-top: 2px;
-
-  color: #e1c57d;
-
   font-size: 27px;
 }
 
+/* =========================================================
+   MOBILE — STRICT SINGLE VIEW
+   ========================================================= */
 
-/* ============================================================
-   SMALL MOBILE
-   ============================================================ */
-
-@media (max-width: 430px) {
-
-  .home-screen {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-
-  .home-card {
-    padding:
-      30px 20px
-      27px;
-  }
-
-  .home-card h1 {
-    font-size: 32px;
-  }
-
-  .mini-mithila {
-    font-size: 15px;
-  }
+@media (max-width: 600px) {
 
   .game-screen {
-    padding-left: 8px;
-    padding-right: 8px;
+    grid-template-rows:
+      46px
+      62px
+      minmax(0, 1fr)
+      62px
+      20px;
+
+    padding:
+      max(4px, env(safe-area-inset-top))
+      7px
+      max(3px, env(safe-area-inset-bottom))
+      7px;
+  }
+
+  .game-header {
+    grid-template-columns: 42px 1fr 42px 42px;
+    gap: 5px;
+  }
+
+  .game-header .icon-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .game-heading strong {
+    font-size: 18px;
   }
 
   .score-row {
-    gap: 6px;
+    padding: 4px 1px;
+    gap: 5px;
+  }
+
+  .stat-card,
+  .pressure-card {
+    min-height: 51px;
+    border-radius: 13px;
+  }
+
+  .stat-card strong {
+    font-size: 17px;
+  }
+
+  .board-shell {
+    padding: 2px 0;
+  }
+
+  .board-inner {
+    width: min(
+      100%,
+      calc((100dvh - 200px) * 0.631578)
+    );
+
+    height: 100%;
+
+    max-height: 100%;
   }
 
   .bubble-controls {
-    gap: 6px;
+    min-height: 60px;
+    grid-template-columns: 1fr 62px 1fr;
+    gap: 5px;
   }
 
   .bubble-preview {
-    padding:
-      7px 6px;
-    gap: 6px;
+    min-height: 54px;
+    border-radius: 13px;
+  }
+
+  .preview-text {
+    font-size: 9px;
   }
 
   .preview-text span {
     font-size: 11px;
   }
 
-  .preview-text small {
-    font-size: 8px;
-  }
-
   .preview-bubble {
-    width: 32px;
-    height: 32px;
-    flex-basis: 32px;
+    width: 34px;
+    height: 34px;
   }
 
   .preview-bubble.small {
-    width: 27px;
-    height: 27px;
-    flex-basis: 27px;
+    width: 28px;
+    height: 28px;
   }
 
   .cannon-mini {
-    min-height: 58px;
+    height: 50px;
   }
 
-  .levels-grid {
-    gap: 7px;
+  .bottom-hint {
+    font-size: 8px;
   }
 
+  .game-message {
+    bottom: 9px;
+    font-size: 11px;
+    padding: 7px 9px;
+  }
 }
 
-
-/* ============================================================
+/* =========================================================
    VERY SMALL PHONES
-   ============================================================ */
+   ========================================================= */
 
-@media (max-width: 350px) {
+@media (max-height: 700px) and (max-width: 600px) {
 
-  .icon-btn {
-    width: 40px;
-    height: 40px;
-    flex-basis: 40px;
+  .game-screen {
+    grid-template-rows:
+      42px
+      55px
+      minmax(0, 1fr)
+      55px
+      18px;
+  }
+
+  .game-header .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .game-header {
+    grid-template-columns: 38px 1fr 38px 38px;
   }
 
   .game-heading strong {
     font-size: 16px;
   }
 
+  .small-label {
+    font-size: 8px;
+  }
+
   .stat-card,
   .pressure-card {
-    min-height: 51px;
+    min-height: 46px;
   }
 
   .bubble-controls {
-    grid-template-columns:
-      1fr
-      .65fr
-      1fr;
+    min-height: 52px;
   }
 
-  .preview-text small {
-    display: none;
+  .bubble-preview {
+    min-height: 48px;
   }
 
+  .cannon-mini {
+    height: 46px;
+  }
+
+  .preview-bubble {
+    width: 30px;
+    height: 30px;
+  }
+
+  .preview-bubble.small {
+    width: 25px;
+    height: 25px;
+  }
+}
+
+/* =========================================================
+   HOME MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+  .home-screen {
+    padding: 14px;
+  }
+
+  .home-card {
+    width: min(410px, 94vw);
+    padding: 25px 21px 22px;
+    border-radius: 22px;
+  }
+
+  .brand-mark {
+    height: 58px;
+  }
+
+  .brand-bubble {
+    width: 36px;
+    height: 36px;
+  }
+
+  .mini-mithila {
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .home-card h1 {
+    font-size: 30px;
+  }
+
+  .home-subtitle {
+    font-size: 12px;
+    margin-bottom: 13px;
+  }
+
+  .made-for {
+    font-size: 10px;
+    margin-bottom: 13px;
+  }
+
+  .main-btn,
+  .ghost-btn {
+    min-height: 43px;
+  }
+
+  .peacock-left,
+  .peacock-right {
+    font-size: 65px;
+  }
+
+  .mithila-border {
+    font-size: 12px;
+  }
+}
+
+/* =========================================================
+   LANDSCAPE PHONE
+   ========================================================= */
+
+@media (max-height: 520px) {
+
+  .game-screen {
+    grid-template-rows:
+      40px
+      48px
+      minmax(0, 1fr)
+      48px
+      16px;
+  }
+
+  .score-row {
+    padding: 2px;
+  }
+
+  .stat-card,
+  .pressure-card {
+    min-height: 42px;
+  }
+
+  .bubble-controls {
+    min-height: 45px;
+  }
+
+  .bubble-preview {
+    min-height: 42px;
+  }
+
+  .cannon-mini {
+    height: 40px;
+  }
+
+  .bottom-hint {
+    font-size: 7px;
+  }
 }
