@@ -1,9 +1,31 @@
 {
   "name": "बुलबुले का खेल",
   "short_name": "बुलबुले का खेल",
-  "start_url": ".",
+  "description": "मिथिला की खूबसूरती के साथ एक शांत और मज़ेदार Bubble Shooter",
+  "lang": "hi",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#fff8ef",
-  "theme_color": "#fff8ef",
-  "lang": "hi"
+  "orientation": "portrait",
+  "background_color": "#0b1730",
+  "theme_color": "#162d58",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
