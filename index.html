@@ -6,91 +6,253 @@
 <meta name="theme-color" content="#142d57">
 <meta name="description" content="बुलबुले का खेल — मिथिला रंगों वाला आरामदायक Bubble Shooter">
 <title>बुलबुले का खेल</title>
+
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
+
 <main class="app">
+
+  <!-- HOME -->
   <section id="homeScreen" class="screen home-screen">
+
     <div class="madhubani-art art-top">☀️</div>
+
     <div class="home-card">
+
       <div class="art-row">🦚　🌸　🐟</div>
+
       <div class="logo-bubble">🫧</div>
+
       <h1>बुलबुले का खेल</h1>
+
       <p>मिथिला की रंगीन मुस्कान के साथ</p>
-      <div class="made-for">मम्मी के लिए प्यार से बनाया गया ❤️</div>
-      <button id="startBtn" class="primary-btn">▶ खेल शुरू करें</button>
-      <button id="homeLevelsBtn" class="secondary-btn">🌸 स्तर चुनें</button>
+
+      <div class="made-for">
+        मम्मी के लिए प्यार से बनाया गया ❤️
+      </div>
+
+      <button id="startBtn" class="primary-btn">
+        ▶ खेल शुरू करें
+      </button>
+
+      <button id="homeLevelsBtn" class="secondary-btn">
+        🌸 स्तर चुनें
+      </button>
+
     </div>
-    <div class="art-row bottom-art">🌺　🐟　🌺　🦚</div>
+
+    <div class="art-row bottom-art">
+      🌺　🐟　🌺　🦚
+    </div>
+
   </section>
 
+
+  <!-- LEVEL SELECT -->
   <section id="levelsScreen" class="screen levels-screen hidden">
+
     <header class="screen-header">
-      <button id="backHomeBtn" class="round-btn">←</button>
-      <div><h2>🌸 स्तर चुनें</h2><p>खुले हुए स्तरों में से कोई भी खेलिए</p></div>
+
+      <button id="backHomeBtn" class="round-btn">
+        ←
+      </button>
+
+      <div>
+        <h2>🌸 स्तर चुनें</h2>
+        <p>खुले हुए स्तरों में से कोई भी खेलिए</p>
+      </div>
+
     </header>
+
     <div id="levelsGrid" class="levels-grid"></div>
-    <div class="mithila-strip">🪷　🐟　🌸　🦚　🌸　🐟　🪷</div>
+
+    <div class="mithila-strip">
+      🪷　🐟　🌸　🦚　🌸　🐟　🪷
+    </div>
+
   </section>
 
+
+  <!-- GAME -->
   <section id="gameScreen" class="screen game-screen hidden">
+
     <header class="game-header">
-      <button id="gameBackBtn" class="round-btn">←</button>
-      <div class="game-title">🫧 बुलबुले का खेल</div>
-      <button id="settingsBtn" class="round-btn">⚙️</button>
+
+      <button id="gameBackBtn" class="round-btn">
+        ←
+      </button>
+
+      <div class="game-title">
+        🫧 बुलबुले का खेल
+      </div>
+
+      <button id="settingsBtn" class="round-btn">
+        ⚙️
+      </button>
+
     </header>
 
+
+    <!-- SCORE -->
     <div class="stats">
-      <div><small>स्तर</small><strong id="levelText">1</strong></div>
-      <div><small>स्कोर</small><strong id="scoreText">0</strong></div>
-      <div><small>🏆</small><strong id="bestText">0</strong></div>
+
+      <div>
+        <small>स्तर</small>
+        <strong id="levelText">1</strong>
+      </div>
+
+      <div>
+        <small>स्कोर</small>
+        <strong id="scoreText">0</strong>
+      </div>
+
+      <div>
+        <small>🏆</small>
+        <strong id="bestText">0</strong>
+      </div>
+
     </div>
 
+
+    <!-- PRESSURE -->
     <div class="pressure-wrap">
+
       <span>⬇️ दबाव</span>
-      <div class="pressure-bar"><i id="pressureBar"></i></div>
+
+      <div class="pressure-bar">
+        <i id="pressureBar"></i>
+      </div>
+
       <b id="pressureText">3 शॉट</b>
+
     </div>
 
+
+    <!-- GAME BOARD -->
     <div class="game-card">
-      <canvas id="gameCanvas" width="480" height="760"></canvas>
-      <div id="message" class="message">निशाना लगाइए और बुलबुला छोड़िए!</div>
+
+      <canvas
+        id="gameCanvas"
+        width="480"
+        height="760">
+      </canvas>
+
+      <div id="message" class="message">
+        निशाना लगाइए और बुलबुला छोड़िए!
+      </div>
+
     </div>
 
+
+    <!-- CURRENT + NEXT SIDE BY SIDE -->
     <div class="controls">
+
       <div class="color-box current-box">
-        <span class="color-label">अभी</span>
-        <span id="currentBubble" class="mini-bubble"></span>
+
+        <span class="color-label">
+          अभी
+        </span>
+
+        <span
+          id="currentBubble"
+          class="mini-bubble">
+        </span>
+
       </div>
+
+
       <div class="color-box next-box">
-        <span class="color-label">अगला</span>
-        <span id="nextBubble" class="mini-bubble"></span>
+
+        <span class="color-label">
+          अगला
+        </span>
+
+        <span
+          id="nextBubble"
+          class="mini-bubble">
+        </span>
+
       </div>
-      <button id="restartBtn" class="control-btn">↻ फिर से</button>
-      <button id="soundBtn" class="control-btn">🔊 ध्वनि</button>
+
+
+      <button id="restartBtn" class="control-btn">
+        ↻ फिर से
+      </button>
+
+
+      <button id="soundBtn" class="control-btn">
+        🔊 ध्वनि
+      </button>
+
     </div>
+
   </section>
 
+
+  <!-- SETTINGS -->
   <div id="settingsPanel" class="overlay hidden">
+
     <div class="modal">
+
       <h2>⚙️ सेटिंग्स</h2>
-      <button id="resetProgressBtn">🗑️ पूरी प्रगति रीसेट करें</button>
-      <button id="closeSettingsBtn">बंद करें</button>
+
+      <button id="resetProgressBtn">
+        🗑️ पूरी प्रगति रीसेट करें
+      </button>
+
+      <button id="closeSettingsBtn">
+        बंद करें
+      </button>
+
     </div>
+
   </div>
 
+
+  <!-- RESULT -->
   <div id="resultPanel" class="overlay hidden">
+
     <div class="modal result-modal">
-      <div id="resultIcon" class="result-icon">🌸</div>
-      <h2 id="resultTitle">बहुत बढ़िया!</h2>
-      <p id="resultText">स्तर पूरा भऽ गेल।</p>
-      <div class="result-score">स्कोर <strong id="resultScore">0</strong></div>
-      <button id="resultPrimaryBtn" class="primary-btn">अगला स्तर</button>
-      <button id="resultSecondaryBtn" class="secondary-btn">स्तर चुनें</button>
+
+      <div id="resultIcon" class="result-icon">
+        🌸
+      </div>
+
+      <h2 id="resultTitle">
+        बहुत बढ़िया!
+      </h2>
+
+      <p id="resultText">
+        स्तर पूरा भऽ गेल।
+      </p>
+
+      <div class="result-score">
+        स्कोर
+        <strong id="resultScore">0</strong>
+      </div>
+
+      <button
+        id="resultPrimaryBtn"
+        class="primary-btn">
+        अगला स्तर
+      </button>
+
+      <button
+        id="resultSecondaryBtn"
+        class="secondary-btn">
+        स्तर चुनें
+      </button>
+
     </div>
+
   </div>
+
 </main>
+
 <script src="game.js"></script>
+
 </body>
 </html>
