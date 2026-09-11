@@ -1,7 +1,7 @@
 /* ============================================================
    BULBULE KA KHEL
    PREMIUM MITHILA BUBBLE SHOOTER
-   COMPLETE GAME ENGINE
+   SOFT / BOUNCY EDITION
    ============================================================ */
 
 (() => {
@@ -75,7 +75,6 @@
   const DIAMETER = 40;
 
   const ROW_HEIGHT = 35;
-
   const TOP_Y = 48;
 
   const SHOOTER_X = W / 2;
@@ -84,14 +83,13 @@
   const DANGER_Y = 590;
 
   const MAX_LEVEL = 50;
-
   const MISS_LIMIT = 3;
 
   const MAX_SPECIALS_PER_LEVEL = 2;
 
 
   /* ==========================================================
-     NORMAL COLORS
+     COLORS
   ========================================================== */
 
   const COLORS = [
@@ -148,7 +146,7 @@
 
 
   /* ==========================================================
-     SPECIAL BUBBLES
+     SPECIALS
   ========================================================== */
 
   const SPECIAL = {
@@ -176,10 +174,12 @@
      SAVE
   ========================================================== */
 
-  const SAVE_KEY = "bulbuleKaKhelSave";
+  const SAVE_KEY =
+    "bulbuleKaKhelSave";
 
 
-  let save = loadSave();
+  let save =
+    loadSave();
 
 
   function loadSave() {
@@ -200,7 +200,10 @@
     try {
 
       const raw =
-        localStorage.getItem(SAVE_KEY);
+        localStorage.getItem(
+          SAVE_KEY
+        );
+
 
       if (!raw)
         return fallback;
@@ -216,16 +219,22 @@
         ...data,
 
         currentLevel:
-          Number(data.currentLevel || 1),
+          Number(
+            data.currentLevel || 1
+          ),
 
         unlocked:
           Math.max(
             1,
-            Number(data.unlocked || 1)
+            Number(
+              data.unlocked || 1
+            )
           ),
 
         completed:
-          Array.isArray(data.completed)
+          Array.isArray(
+            data.completed
+          )
             ? data.completed
             : [],
 
@@ -233,10 +242,14 @@
           data.bestScores || {},
 
         score:
-          Number(data.score || 0),
+          Number(
+            data.score || 0
+          ),
 
         best:
-          Number(data.best || 0),
+          Number(
+            data.best || 0
+          ),
 
         sound:
           data.sound !== false
@@ -267,7 +280,7 @@
 
 
   /* ==========================================================
-     GAME STATE
+     STATE
   ========================================================== */
 
   let grid = [];
@@ -279,15 +292,12 @@
   let nextSpecial = null;
 
   let score = 0;
-
   let missedShots = 0;
 
   let busy = false;
-
   let paused = false;
 
   let gameEnded = false;
-
   let levelWon = false;
 
   let movingBubble = null;
@@ -302,10 +312,13 @@
 
   let specialBursts = [];
 
+  let impacts = [];
+
+  let wobbleEffects = [];
+
   let ceilingAnimation = null;
 
   let launcherRecoil = 0;
-
   let launcherBounce = 0;
 
   let shake = 0;
@@ -318,6 +331,11 @@
   let lastTime = 0;
 
   let audioContext = null;
+
+  /* Touch state */
+
+  let pointerHolding = false;
+  let activePointerId = null;
 
 
   /* ==========================================================
@@ -376,7 +394,7 @@
 
 
   /* ==========================================================
-     SPECIAL GENERATION
+     SPECIAL CHOICE
   ========================================================== */
 
   function chooseSpecial() {
@@ -384,7 +402,9 @@
     if (
       save.currentLevel < 4
     ) {
+
       return null;
+
     }
 
 
@@ -392,14 +412,23 @@
       specialCount >=
       MAX_SPECIALS_PER_LEVEL
     ) {
+
       return null;
+
     }
 
 
+    /*
+      Rare enough that normal
+      balls remain dominant.
+    */
+
     if (
-      Math.random() > 0.065
+      Math.random() > 0.055
     ) {
+
       return null;
+
     }
 
 
@@ -431,9 +460,14 @@
 
     return {
 
-      color: randomColor(),
+      color:
+        randomColor(),
 
-      special: chooseSpecial()
+      special:
+        chooseSpecial(),
+
+      squish: 0,
+      wobble: 0
 
     };
 
@@ -441,7 +475,7 @@
 
 
   /* ==========================================================
-     LEVEL CREATION
+     GRID
   ========================================================== */
 
   function createLevel() {
@@ -470,30 +504,29 @@
         q++
       ) {
 
-        let bubble = null;
+        let bubble =
+          makeBubble();
 
 
         /*
-          Slightly irregular patterns
-          at higher levels.
+          Slight empty spaces only
+          after early levels.
         */
 
         if (
           r > 1 &&
           save.currentLevel >= 8 &&
-          Math.random() < 0.04
+          Math.random() < 0.045
         ) {
 
           bubble = null;
 
-        } else {
-
-          bubble = makeBubble();
-
         }
 
 
-        row.push(bubble);
+        row.push(
+          bubble
+        );
 
       }
 
@@ -504,7 +537,7 @@
 
 
     /*
-      Always keep top row supported.
+      Top row must be solid enough.
     */
 
     for (
@@ -513,7 +546,9 @@
       q++
     ) {
 
-      if (!grid[0][q]) {
+      if (
+        !grid[0][q]
+      ) {
 
         grid[0][q] =
           makeBubble();
@@ -523,33 +558,28 @@
     }
 
 
-    /*
-      Remove accidental large
-      starting groups.
-    */
-
-    cleanStartingBoard();
+    removeStartingMatches();
 
 
     currentColor =
       randomColor();
 
+
     nextColor =
       randomColor();
+
 
     currentSpecial = null;
     nextSpecial = null;
 
-    score = 0;
 
+    score = 0;
     missedShots = 0;
 
     busy = false;
-
     paused = false;
 
     gameEnded = false;
-
     levelWon = false;
 
     movingBubble = null;
@@ -557,17 +587,16 @@
     fallingBubbles = [];
 
     popEffects = [];
-
     particles = [];
-
     rings = [];
 
     specialBursts = [];
+    impacts = [];
+    wobbleEffects = [];
 
     ceilingAnimation = null;
 
     launcherRecoil = 0;
-
     launcherBounce = 0;
 
     shake = 0;
@@ -583,7 +612,7 @@
   }
 
 
-  function cleanStartingBoard() {
+  function removeStartingMatches() {
 
     for (
       let pass = 0;
@@ -591,7 +620,7 @@
       pass++
     ) {
 
-      let found = false;
+      let changed = false;
 
 
       for (
@@ -606,15 +635,17 @@
           q++
         ) {
 
-          const b =
+          const bubble =
             grid[r][q];
 
 
           if (
-            !b ||
-            b.special
+            !bubble ||
+            bubble.special
           ) {
+
             continue;
+
           }
 
 
@@ -622,7 +653,7 @@
             findCluster(
               q,
               r,
-              b.color
+              bubble.color
             );
 
 
@@ -639,15 +670,25 @@
               ];
 
 
-            grid[target[1]][target[0]] =
-              {
-                color:
-                  randomColor(),
-                special: null
-              };
+            grid[
+              target[1]
+            ][
+              target[0]
+            ] = {
+
+              color:
+                randomColor(),
+
+              special:
+                null,
+
+              squish: 0,
+              wobble: 0
+
+            };
 
 
-            found = true;
+            changed = true;
 
           }
 
@@ -656,7 +697,7 @@
       }
 
 
-      if (!found)
+      if (!changed)
         break;
 
     }
@@ -665,10 +706,13 @@
 
 
   /* ==========================================================
-     GRID MATH
+     POSITION
   ========================================================== */
 
-  function getX(q, r) {
+  function getX(
+    q,
+    r
+  ) {
 
     return (
       RADIUS +
@@ -693,19 +737,28 @@
   }
 
 
-  function getPosition(q, r) {
+  function getPosition(
+    q,
+    r
+  ) {
 
     return {
 
-      x: getX(q, r),
-      y: getY(r)
+      x:
+        getX(q, r),
+
+      y:
+        getY(r)
 
     };
 
   }
 
 
-  function inside(q, r) {
+  function inside(
+    q,
+    r
+  ) {
 
     return (
       q >= 0 &&
@@ -717,7 +770,10 @@
   }
 
 
-  function getNeighbors(q, r) {
+  function getNeighbors(
+    q,
+    r
+  ) {
 
     const odd =
       r % 2 === 1;
@@ -745,7 +801,6 @@
 
 
     return offsets
-
       .map(
         ([dq, dr]) =>
           [
@@ -753,17 +808,19 @@
             r + dr
           ]
       )
-
       .filter(
         ([nq, nr]) =>
-          inside(nq, nr)
+          inside(
+            nq,
+            nr
+          )
       );
 
   }
 
 
   /* ==========================================================
-     CLUSTER FINDING
+     CLUSTER
   ========================================================== */
 
   function findCluster(
@@ -773,22 +830,29 @@
   ) {
 
     if (
-      !inside(startQ, startR)
+      !inside(
+        startQ,
+        startR
+      )
     ) {
+
       return [];
+
     }
 
 
-    const starting =
+    const start =
       grid[startR][startQ];
 
 
     if (
-      !starting ||
-      starting.special ||
-      starting.color !== color
+      !start ||
+      start.special ||
+      start.color !== color
     ) {
+
       return [];
+
     }
 
 
@@ -804,7 +868,9 @@
     const result = [];
 
 
-    while (stack.length) {
+    while (
+      stack.length
+    ) {
 
       const [
         q,
@@ -820,11 +886,15 @@
       if (
         visited.has(key)
       ) {
+
         continue;
+
       }
 
 
-      visited.add(key);
+      visited.add(
+        key
+      );
 
 
       const bubble =
@@ -836,7 +906,9 @@
         bubble.special ||
         bubble.color !== color
       ) {
+
         continue;
+
       }
 
 
@@ -904,7 +976,9 @@
     }
 
 
-    while (stack.length) {
+    while (
+      stack.length
+    ) {
 
       const [
         q,
@@ -924,7 +998,9 @@
         if (
           !grid[nr]?.[nq]
         ) {
+
           continue;
+
         }
 
 
@@ -935,11 +1011,15 @@
         if (
           connected.has(key)
         ) {
+
           continue;
+
         }
 
 
-        connected.add(key);
+        connected.add(
+          key
+        );
 
 
         stack.push(
@@ -957,7 +1037,7 @@
 
 
   /* ==========================================================
-     ATTACHMENT
+     BEST ATTACHMENT
   ========================================================== */
 
   function findBestAttachment(
@@ -965,15 +1045,13 @@
     y
   ) {
 
-    let nearest = null;
-
-    let nearestDistance =
-      Infinity;
+    let best = null;
+    let bestDistance = Infinity;
 
 
     /*
-      Prefer empty cells next to
-      an existing bubble.
+      First look only at empty cells
+      touching another bubble.
     */
 
     for (
@@ -991,15 +1069,20 @@
         if (
           grid[r][q]
         ) {
+
           continue;
+
         }
 
 
         const neighbors =
-          getNeighbors(q, r);
+          getNeighbors(
+            q,
+            r
+          );
 
 
-        const hasBubbleNeighbor =
+        const attached =
           neighbors.some(
             ([nq, nr]) =>
               Boolean(
@@ -1008,12 +1091,20 @@
           );
 
 
-        if (!hasBubbleNeighbor)
+        if (
+          !attached
+        ) {
+
           continue;
+
+        }
 
 
         const p =
-          getPosition(q, r);
+          getPosition(
+            q,
+            r
+          );
 
 
         const d =
@@ -1025,66 +1116,69 @@
 
         if (
           d <
-          nearestDistance
+          bestDistance
         ) {
 
-          nearestDistance = d;
-
-          nearest = [q, r];
+          bestDistance = d;
+          best = [q, r];
 
         }
 
       }
 
     }
-
-
-    if (nearest)
-      return nearest;
 
 
     /*
-      Fallback: nearest empty cell.
+      Fallback.
     */
 
-    for (
-      let r = 0;
-      r < grid.length;
-      r++
-    ) {
+    if (!best) {
 
       for (
-        let q = 0;
-        q < COLS;
-        q++
+        let r = 0;
+        r < grid.length;
+        r++
       ) {
 
-        if (
-          grid[r][q]
-        ) {
-          continue;
-        }
-
-
-        const p =
-          getPosition(q, r);
-
-
-        const d =
-          Math.hypot(
-            p.x - x,
-            p.y - y
-          );
-
-
-        if (
-          d <
-          nearestDistance
+        for (
+          let q = 0;
+          q < COLS;
+          q++
         ) {
 
-          nearestDistance = d;
+          if (
+            grid[r][q]
+          ) {
 
-          nearest = [q, r];
+            continue;
+
+          }
+
+
+          const p =
+            getPosition(
+              q,
+              r
+            );
+
+
+          const d =
+            Math.hypot(
+              p.x - x,
+              p.y - y
+            );
+
+
+          if (
+            d <
+            bestDistance
+          ) {
+
+            bestDistance = d;
+            best = [q, r];
+
+          }
 
         }
 
@@ -1093,7 +1187,7 @@
     }
 
 
-    if (!nearest) {
+    if (!best) {
 
       grid.push(
         new Array(COLS)
@@ -1101,7 +1195,7 @@
       );
 
 
-      nearest = [
+      best = [
         Math.floor(
           COLS / 2
         ),
@@ -1111,7 +1205,7 @@
     }
 
 
-    return nearest;
+    return best;
 
   }
 
@@ -1127,7 +1221,9 @@
       paused ||
       gameEnded ||
       levelWon ||
-      ceilingAnimation
+      ceilingAnimation ||
+      !movingBubble
+        && false
     ) {
       return;
     }
@@ -1140,22 +1236,18 @@
 
 
     launcherRecoil = 1;
-
     launcherBounce = 1;
 
 
     let dx =
-      aimX - SHOOTER_X;
+      aimX -
+      SHOOTER_X;
 
 
     let dy =
-      aimY - SHOOTER_Y;
+      aimY -
+      SHOOTER_Y;
 
-
-    /*
-      Never allow nearly horizontal
-      reverse/downward shooting.
-    */
 
     if (
       dy > -55
@@ -1173,24 +1265,29 @@
       ) || 1;
 
 
-    const speed = 900;
+    const speed =
+      880;
 
 
     movingBubble = {
 
-      x: SHOOTER_X,
+      x:
+        SHOOTER_X,
 
-      y: SHOOTER_Y - 4,
+      y:
+        SHOOTER_Y - 4,
 
       vx:
         (
-          dx / distance
+          dx /
+          distance
         ) *
         speed,
 
       vy:
         (
-          dy / distance
+          dy /
+          distance
         ) *
         speed,
 
@@ -1203,14 +1300,15 @@
       scale:
         0.82,
 
+      squash:
+        0,
+
+      rotation: 0,
+
       trail: []
 
     };
 
-
-    /*
-      Current -> next
-    */
 
     currentColor =
       nextColor;
@@ -1219,10 +1317,6 @@
     currentSpecial =
       nextSpecial;
 
-
-    /*
-      Generate next.
-    */
 
     nextColor =
       randomColor();
@@ -1246,13 +1340,18 @@
 
 
   /* ==========================================================
-     MOVING BUBBLE COLLISION
+     FINISH SHOT
   ========================================================== */
 
   function finishMovingBubble() {
 
-    if (!movingBubble)
+    if (
+      !movingBubble
+    ) {
+
       return;
+
+    }
 
 
     const shot =
@@ -1275,7 +1374,13 @@
         shot.color,
 
       special:
-        shot.special || null
+        shot.special || null,
+
+      squish:
+        0.95,
+
+      wobble:
+        0
 
     };
 
@@ -1284,11 +1389,56 @@
       attached;
 
 
-    const position =
-      getPosition(q, r);
+    const p =
+      getPosition(
+        q,
+        r
+      );
 
 
-    movingBubble = null;
+    movingBubble =
+      null;
+
+
+    /*
+      Soft impact.
+    */
+
+    impacts.push({
+
+      x: p.x,
+      y: p.y,
+
+      life: 0,
+
+      max: 0.28,
+
+      strength: 1
+
+    });
+
+
+    createParticles(
+      p.x,
+      p.y,
+      attached.color,
+      6
+    );
+
+
+    rings.push({
+
+      x: p.x,
+      y: p.y,
+
+      color:
+        attached.color,
+
+      life: 0,
+
+      max: 0.28
+
+    });
 
 
     /*
@@ -1311,32 +1461,8 @@
 
 
     /*
-      Normal bubble.
+      Normal match.
     */
-
-    createParticles(
-      position.x,
-      position.y,
-      attached.color,
-      7
-    );
-
-
-    rings.push({
-
-      x: position.x,
-
-      y: position.y,
-
-      color:
-        attached.color,
-
-      life: 0,
-
-      max: 0.26
-
-    });
-
 
     const group =
       findCluster(
@@ -1356,6 +1482,17 @@
 
     } else {
 
+      /*
+        Give nearby balls a little
+        soft wobble.
+      */
+
+      softWobbleAround(
+        q,
+        r
+      );
+
+
       missedShots++;
 
 
@@ -1366,17 +1503,21 @@
 
         missedShots = 0;
 
-        descendCeiling();
+
+        setTimeout(
+          () => {
+            descendCeiling();
+          },
+          80
+        );
+
 
       } else {
 
         showMessage(
           missedShots === 1
-
-            ? "अच्छा निशाना! रंग मिलाइए"
-
+            ? "अच्छा निशाना!"
             : "बस एक मौका और…"
-
         );
 
 
@@ -1402,39 +1543,84 @@
 
 
   /* ==========================================================
+     SOFT WOBBLE
+  ========================================================== */
+
+  function softWobbleAround(
+    centerQ,
+    centerR
+  ) {
+
+    const nearby =
+      getNeighbors(
+        centerQ,
+        centerR
+      );
+
+
+    nearby.forEach(
+      ([q, r], index) => {
+
+        const bubble =
+          grid[r]?.[q];
+
+
+        if (!bubble)
+          return;
+
+
+        bubble.wobble =
+          0.8;
+
+
+        wobbleEffects.push({
+
+          q,
+          r,
+
+          life: 0,
+
+          max:
+            0.32 +
+            index * 0.025
+
+        });
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
      MATCH
   ========================================================== */
 
-  function handleMatch(group) {
+  function handleMatch(
+    group
+  ) {
 
     missedShots = 0;
 
 
-    let gained =
-      group.length *
+    const size =
+      group.length;
+
+
+    score +=
+      size *
       20;
 
 
     if (
-      group.length >= 5
+      size >= 5
     ) {
 
-      gained +=
-        group.length *
+      score +=
+        size *
         10;
 
     }
-
-
-    score += gained;
-
-
-    const color =
-      grid[
-        group[0][1]
-      ][
-        group[0][0]
-      ].color;
 
 
     for (
@@ -1454,7 +1640,21 @@
 
 
       const p =
-        getPosition(q, r);
+        getPosition(
+          q,
+          r
+        );
+
+
+      /*
+        Squish all neighbouring
+        bubbles before pop.
+      */
+
+      softWobbleAround(
+        q,
+        r
+      );
 
 
       grid[r][q] =
@@ -1464,22 +1664,27 @@
       popEffects.push({
 
         x: p.x,
-
         y: p.y,
 
         color:
           bubble.color,
 
         special:
-          null,
+          bubble.special || null,
 
         life: 0,
 
         max:
-          0.42,
+          0.42 +
+          Math.random() * 0.1,
 
         delay:
-          Math.random() * 0.07
+          Math.random() * 0.06,
+
+        seed:
+          Math.random() *
+          Math.PI *
+          2
 
       });
 
@@ -1487,33 +1692,37 @@
       createParticles(
         p.x,
         p.y,
-        color,
-        14
+        bubble.color,
+        13
       );
 
     }
 
 
     if (
-      group.length >= 7
+      size >= 7
     ) {
 
       showMessage(
         "गजब कऽ देलियै! ✨"
       );
 
-    } else if (
-      group.length >= 5
+    }
+
+    else if (
+      size >= 5
     ) {
 
       showMessage(
         "अहाँ कमाल कऽ देलियै!"
       );
 
-    } else {
+    }
+
+    else {
 
       showMessage(
-        "अरे वाह! 😄"
+        "बहुत नीक! 😄"
       );
 
     }
@@ -1521,18 +1730,18 @@
 
     shake =
       Math.min(
-        8,
+        7,
         2 +
-        group.length *
-        0.35
+        size *
+        .35
       );
 
 
     playSound(
       440 +
-      group.length *
+      size *
       35,
-      0.15,
+      0.14,
       "sine",
       0.045
     );
@@ -1545,7 +1754,9 @@
           gameEnded ||
           levelWon
         ) {
+
           return;
+
         }
 
 
@@ -1554,7 +1765,7 @@
 
 
         if (
-          dropped > 0
+          dropped
         ) {
 
           score +=
@@ -1583,14 +1794,14 @@
         }
 
       },
-      190
+      220
     );
 
   }
 
 
   /* ==========================================================
-     DROP DETACHED BUBBLES
+     DROP DETACHED
   ========================================================== */
 
   function dropDetached() {
@@ -1629,18 +1840,27 @@
         if (
           connected.has(key)
         ) {
+
           continue;
+
         }
 
 
         const p =
-          getPosition(q, r);
+          getPosition(
+            q,
+            r
+          );
 
+
+        /*
+          These are the soft-body
+          starting values.
+        */
 
         fallingBubbles.push({
 
           x: p.x,
-
           y: p.y,
 
           color:
@@ -1654,12 +1874,15 @@
               Math.random() -
               0.5
             ) *
-            110,
+            95,
 
           vy:
-            -50 -
+            -55 -
             Math.random() *
-            90,
+            80,
+
+          gravity:
+            410,
 
           rotation:
             Math.random() *
@@ -1674,11 +1897,27 @@
             5,
 
           scale:
-            0.9 +
-            Math.random() *
-            0.12,
+            0.98,
 
-          life: 0
+          squash:
+            0.85,
+
+          stretch:
+            1.1,
+
+          bounce:
+            0,
+
+          life: 0,
+
+          grounded:
+            false,
+
+          floorY:
+            H + 45 +
+
+            Math.random() *
+            80
 
         });
 
@@ -1700,11 +1939,8 @@
 
       showMessage(
         count >= 8
-
           ? "गजब कऽ देलियै! 💫"
-
           : "अहाँ कमाल कऽ देलियै!"
-
       );
 
 
@@ -1724,7 +1960,7 @@
 
 
   /* ==========================================================
-     SPECIAL BUBBLES
+     SPECIALS
   ========================================================== */
 
   function activateSpecial(
@@ -1734,7 +1970,10 @@
   ) {
 
     const p =
-      getPosition(q, r);
+      getPosition(
+        q,
+        r
+      );
 
 
     grid[r][q] =
@@ -1744,7 +1983,6 @@
     specialBursts.push({
 
       x: p.x,
-
       y: p.y,
 
       type,
@@ -1764,7 +2002,7 @@
 
     shake =
       type === "bomb"
-        ? 13
+        ? 12
         : 7;
 
 
@@ -1779,8 +2017,7 @@
 
     }
 
-
-    if (
+    else if (
       type === "bomb"
     ) {
 
@@ -1791,8 +2028,7 @@
 
     }
 
-
-    if (
+    else if (
       type === "rainbow"
     ) {
 
@@ -1800,8 +2036,7 @@
 
     }
 
-
-    if (
+    else if (
       type === "sun"
     ) {
 
@@ -1826,7 +2061,10 @@
 
 
     const p =
-      getPosition(q, r);
+      getPosition(
+        q,
+        r
+      );
 
 
     grid[r][q] =
@@ -1843,15 +2081,19 @@
         bubble.color,
 
       special:
-        bubble.special,
+        bubble.special || null,
 
       life: 0,
 
-      max: 0.45,
+      max:
+        0.42 +
+        Math.random() * 0.08,
 
       delay:
-        Math.random() *
-        0.05
+        Math.random() * 0.05,
+
+      seed:
+        Math.random()
 
     });
 
@@ -1860,11 +2102,15 @@
       p.x,
       p.y,
       bubble.color,
-      10
+      11
     );
 
   }
 
+
+  /* ==========================================================
+     LASER
+  ========================================================== */
 
   function activateLaser(
     q,
@@ -1875,10 +2121,6 @@
       "⚡ लेज़र चला!"
     );
 
-
-    /*
-      Horizontal line.
-    */
 
     for (
       let col = 0;
@@ -1899,10 +2141,6 @@
 
     }
 
-
-    /*
-      Vertical line.
-    */
 
     for (
       let row = 0;
@@ -1934,11 +2172,15 @@
 
     setTimeout(
       specialFinish,
-      260
+      280
     );
 
   }
 
+
+  /* ==========================================================
+     BOMB
+  ========================================================== */
 
   function activateBomb(
     q,
@@ -1951,7 +2193,10 @@
 
 
     const center =
-      getPosition(q, r);
+      getPosition(
+        q,
+        r
+      );
 
 
     for (
@@ -1981,11 +2226,15 @@
           );
 
 
-        if (
+        const distance =
           Math.hypot(
             p.x - center.x,
             p.y - center.y
-          ) <= 100
+          );
+
+
+        if (
+          distance <= 100
         ) {
 
           clearBubbleAt(
@@ -2001,7 +2250,7 @@
 
 
     playSound(
-      100,
+      110,
       0.3,
       "sawtooth",
       0.05
@@ -2010,15 +2259,19 @@
 
     setTimeout(
       specialFinish,
-      280
+      300
     );
 
   }
 
 
+  /* ==========================================================
+     MOST COMMON COLOR
+  ========================================================== */
+
   function getMostCommonColor() {
 
-    const count = {};
+    const counts = {};
 
 
     for (
@@ -2035,13 +2288,15 @@
           !bubble ||
           bubble.special
         ) {
+
           continue;
+
         }
 
 
-        count[bubble.color] =
+        counts[bubble.color] =
           (
-            count[bubble.color] ||
+            counts[bubble.color] ||
             0
           ) + 1;
 
@@ -2050,25 +2305,22 @@
     }
 
 
-    let bestColor =
-      0;
-
-    let bestAmount =
-      -1;
+    let bestColor = 0;
+    let bestCount = -1;
 
 
     for (
       const key
-      in count
+      in counts
     ) {
 
       if (
-        count[key] >
-        bestAmount
+        counts[key] >
+        bestCount
       ) {
 
-        bestAmount =
-          count[key];
+        bestCount =
+          counts[key];
 
         bestColor =
           Number(key);
@@ -2083,6 +2335,10 @@
   }
 
 
+  /* ==========================================================
+     RAINBOW
+  ========================================================== */
+
   function activateRainbow() {
 
     showMessage(
@@ -2090,16 +2346,16 @@
     );
 
 
-    const color =
-      getMostCommonColor();
-
-
     clearColor(
-      color
+      getMostCommonColor()
     );
 
   }
 
+
+  /* ==========================================================
+     SUN
+  ========================================================== */
 
   function activateSun() {
 
@@ -2108,12 +2364,8 @@
     );
 
 
-    const color =
-      getMostCommonColor();
-
-
     clearColor(
-      color
+      getMostCommonColor()
     );
 
   }
@@ -2144,7 +2396,9 @@
           bubble.special ||
           bubble.color !== color
         ) {
+
           continue;
+
         }
 
 
@@ -2168,7 +2422,7 @@
 
     setTimeout(
       specialFinish,
-      270
+      300
     );
 
   }
@@ -2193,6 +2447,7 @@
 
     updateUI();
 
+
     saveGame();
 
 
@@ -2212,24 +2467,21 @@
 
 
   /* ==========================================================
-     CEILING PRESSURE
+     CEILING
   ========================================================== */
 
   function descendCeiling() {
 
-    /*
-      Prevent constant animation stacking.
-    */
-
     if (
       ceilingAnimation
     ) {
+
       return;
+
     }
 
 
-    const newRow =
-      [];
+    const row = [];
 
 
     for (
@@ -2238,7 +2490,7 @@
       q++
     ) {
 
-      newRow.push(
+      row.push(
         makeBubble()
       );
 
@@ -2246,7 +2498,7 @@
 
 
     grid.unshift(
-      newRow
+      row
     );
 
 
@@ -2254,7 +2506,7 @@
 
       life: 0,
 
-      max: 0.4
+      max: 0.45
 
     };
 
@@ -2272,6 +2524,41 @@
     );
 
 
+    /*
+      Add a soft shake.
+    */
+
+    for (
+      let r = 0;
+      r < Math.min(
+        2,
+        grid.length
+      );
+      r++
+    ) {
+
+      for (
+        let q = 0;
+        q < COLS;
+        q++
+      ) {
+
+        const bubble =
+          grid[r]?.[q];
+
+
+        if (bubble) {
+
+          bubble.wobble =
+            0.65;
+
+        }
+
+      }
+
+    }
+
+
     if (
       getHighestBubbleY() >=
       DANGER_Y
@@ -2286,7 +2573,8 @@
 
   function getHighestBubbleY() {
 
-    let lowest = 9999;
+    let highest =
+      Infinity;
 
 
     for (
@@ -2305,9 +2593,9 @@
           grid[r][q]
         ) {
 
-          lowest =
+          highest =
             Math.min(
-              lowest,
+              highest,
               getY(r)
             );
 
@@ -2318,10 +2606,14 @@
     }
 
 
-    return lowest;
+    return highest;
 
   }
 
+
+  /* ==========================================================
+     BOARD EMPTY
+  ========================================================== */
 
   function isBoardEmpty() {
 
@@ -2349,7 +2641,7 @@
 
 
   /* ==========================================================
-     WIN / LOSE
+     WIN
   ========================================================== */
 
   function completeLevel() {
@@ -2357,12 +2649,13 @@
     if (
       levelWon
     ) {
+
       return;
+
     }
 
 
     levelWon = true;
-
     busy = true;
 
 
@@ -2427,6 +2720,21 @@
     );
 
 
+    /*
+      Little celebration.
+    */
+
+    for (
+      let i = 0;
+      i < 28;
+      i++
+    ) {
+
+      createCelebrationParticle();
+
+    }
+
+
     setTimeout(
       () => {
 
@@ -2435,23 +2743,28 @@
         );
 
       },
-      600
+      700
     );
 
   }
 
+
+  /* ==========================================================
+     LOSE
+  ========================================================== */
 
   function endGame() {
 
     if (
       gameEnded
     ) {
+
       return;
+
     }
 
 
     gameEnded = true;
-
     busy = true;
 
 
@@ -2476,8 +2789,60 @@
         );
 
       },
-      600
+      650
     );
+
+  }
+
+
+  /* ==========================================================
+     CELEBRATION PARTICLES
+  ========================================================== */
+
+  function createCelebrationParticle() {
+
+    particles.push({
+
+      x:
+        Math.random() *
+        W,
+
+      y:
+        20 +
+        Math.random() *
+        150,
+
+      vx:
+        (
+          Math.random() -
+          0.5
+        ) *
+        160,
+
+      vy:
+        80 +
+        Math.random() *
+        120,
+
+      color:
+        Math.floor(
+          Math.random() *
+          COLORS.length
+        ),
+
+      size:
+        2 +
+        Math.random() *
+        3,
+
+      life: 0,
+
+      max:
+        0.8 +
+        Math.random() *
+        0.5
+
+    });
 
   }
 
@@ -2490,7 +2855,7 @@
     x,
     y,
     color,
-    count = 10
+    count
   ) {
 
     for (
@@ -2506,15 +2871,14 @@
 
 
       const speed =
-        50 +
+        55 +
         Math.random() *
-        190;
+        180;
 
 
       particles.push({
 
         x,
-
         y,
 
         vx:
@@ -2531,14 +2895,14 @@
         size:
           1.5 +
           Math.random() *
-          3,
+          3.2,
 
         life: 0,
 
         max:
           0.35 +
           Math.random() *
-          0.35
+          0.4
 
       });
 
@@ -2580,6 +2944,10 @@
       );
 
 
+    /* --------------------------------------------------------
+       Ceiling animation
+    -------------------------------------------------------- */
+
     if (
       ceilingAnimation
     ) {
@@ -2601,15 +2969,91 @@
     }
 
 
-    /*
-      Moving bubble.
-    */
+    /* --------------------------------------------------------
+       Grid bubble squish/wobble
+    -------------------------------------------------------- */
+
+    for (
+      const row
+      of grid
+    ) {
+
+      for (
+        const bubble
+        of row
+      ) {
+
+        if (!bubble)
+          continue;
+
+
+        if (
+          bubble.squish > 0
+        ) {
+
+          bubble.squish -=
+            dt * 5;
+
+        }
+
+
+        if (
+          bubble.wobble > 0
+        ) {
+
+          bubble.wobble -=
+            dt * 3.7;
+
+        }
+
+      }
+
+    }
+
+
+    /* --------------------------------------------------------
+       Wobble effects
+    -------------------------------------------------------- */
+
+    for (
+      let i =
+        wobbleEffects.length - 1;
+      i >= 0;
+      i--
+    ) {
+
+      const effect =
+        wobbleEffects[i];
+
+
+      effect.life +=
+        dt;
+
+
+      if (
+        effect.life >=
+        effect.max
+      ) {
+
+        wobbleEffects.splice(
+          i,
+          1
+        );
+
+      }
+
+    }
+
+
+    /* --------------------------------------------------------
+       Moving bubble
+    -------------------------------------------------------- */
 
     if (
       movingBubble
     ) {
 
-      const b =
+      const bubble =
         movingBubble;
 
 
@@ -2617,11 +3061,13 @@
         Trail.
       */
 
-      b.trail.push({
+      bubble.trail.push({
 
-        x: b.x,
+        x:
+          bubble.x,
 
-        y: b.y,
+        y:
+          bubble.y,
 
         life: 0
 
@@ -2629,74 +3075,119 @@
 
 
       if (
-        b.trail.length > 10
+        bubble.trail.length > 11
       ) {
 
-        b.trail.shift();
+        bubble.trail.shift();
 
       }
 
 
       for (
-        const t
-        of b.trail
+        const trail
+        of bubble.trail
       ) {
 
-        t.life +=
+        trail.life +=
           dt;
 
       }
 
 
-      b.x +=
-        b.vx *
+      /*
+        Movement.
+      */
+
+      bubble.x +=
+        bubble.vx *
         dt;
 
 
-      b.y +=
-        b.vy *
+      bubble.y +=
+        bubble.vy *
         dt;
 
 
       /*
-        Side-wall bounce.
+        Slight rolling rotation.
+      */
+
+      bubble.rotation +=
+        (
+          bubble.vx /
+          5000
+        ) *
+        dt;
+
+
+      /*
+        Side bounce.
       */
 
       if (
-        b.x <=
+        bubble.x <
         RADIUS
       ) {
 
-        b.x =
+        bubble.x =
           RADIUS;
 
-        b.vx =
+
+        bubble.vx =
           Math.abs(
-            b.vx
+            bubble.vx
           );
+
+
+        bubble.squash =
+          0.8;
 
       }
 
 
       if (
-        b.x >=
+        bubble.x >
         W - RADIUS
       ) {
 
-        b.x =
+        bubble.x =
           W - RADIUS;
 
-        b.vx =
+
+        bubble.vx =
           -Math.abs(
-            b.vx
+            bubble.vx
           );
 
+
+        bubble.squash =
+          0.8;
+
       }
+
+
+      /*
+        Recover squash.
+      */
+
+      bubble.squash +=
+        (
+          0 -
+          bubble.squash
+        ) *
+        Math.min(
+          1,
+          dt * 15
+        );
 
 
       let collision =
         false;
 
+
+      /*
+        Bubble collision.
+      */
 
       for (
         let r = 0;
@@ -2714,7 +3205,9 @@
           if (
             !grid[r][q]
           ) {
+
             continue;
+
           }
 
 
@@ -2725,15 +3218,63 @@
             );
 
 
-          if (
+          const distance =
             Math.hypot(
-              p.x - b.x,
-              p.y - b.y
-            ) <=
+              p.x - bubble.x,
+              p.y - bubble.y
+            );
+
+
+          if (
+            distance <=
             DIAMETER - 3
           ) {
 
-            collision = true;
+            collision =
+              true;
+
+
+            /*
+              Tiny squash before
+              attachment.
+            */
+
+            bubble.squash =
+              1;
+
+
+            grid[r][q].squish =
+              1;
+
+
+            grid[r][q].wobble =
+              1;
+
+
+            impacts.push({
+
+              x:
+                (
+                  p.x +
+                  bubble.x
+                ) /
+                2,
+
+              y:
+                (
+                  p.y +
+                  bubble.y
+                ) /
+                2,
+
+              life: 0,
+
+              max: 0.22,
+
+              strength: 0.8
+
+            });
+
 
             break;
 
@@ -2744,13 +3285,23 @@
       }
 
 
+      /*
+        Ceiling collision.
+      */
+
       if (
-        b.y <=
+        bubble.y <=
         TOP_Y +
         RADIUS
       ) {
 
-        collision = true;
+        bubble.y =
+          TOP_Y +
+          RADIUS;
+
+
+        collision =
+          true;
 
       }
 
@@ -2766,9 +3317,9 @@
     }
 
 
-    /*
-      Falling bubbles.
-    */
+    /* --------------------------------------------------------
+       Falling bubbles
+    -------------------------------------------------------- */
 
     for (
       let i =
@@ -2777,48 +3328,226 @@
       i--
     ) {
 
-      const b =
+      const bubble =
         fallingBubbles[i];
 
 
-      b.life +=
+      bubble.life +=
         dt;
-
-
-      b.vy +=
-        430 *
-        dt;
-
-
-      b.x +=
-        b.vx *
-        dt;
-
-
-      b.y +=
-        b.vy *
-        dt;
-
-
-      b.rotation +=
-        b.spin *
-        dt;
-
-
-      /*
-        Gentle horizontal damping.
-      */
-
-      b.vx *=
-        Math.pow(
-          0.25,
-          dt
-        );
 
 
       if (
-        b.y >
-        H + 100
+        !bubble.grounded
+      ) {
+
+        /*
+          Gravity.
+        */
+
+        bubble.vy +=
+          bubble.gravity *
+          dt;
+
+
+        bubble.x +=
+          bubble.vx *
+          dt;
+
+
+        bubble.y +=
+          bubble.vy *
+          dt;
+
+
+        bubble.rotation +=
+          bubble.spin *
+          dt;
+
+
+        /*
+          Stretch while falling.
+        */
+
+        const fallSpeed =
+          Math.abs(
+            bubble.vy
+          );
+
+
+        bubble.stretch =
+          1 +
+          Math.min(
+            0.28,
+            fallSpeed /
+            1500
+          );
+
+
+        bubble.squash =
+          1 /
+          bubble.stretch;
+
+
+        /*
+          Side walls.
+        */
+
+        if (
+          bubble.x <
+          RADIUS
+        ) {
+
+          bubble.x =
+            RADIUS;
+
+
+          bubble.vx =
+            Math.abs(
+              bubble.vx
+            ) *
+            0.78;
+
+
+          bubble.squash =
+            0.75;
+
+        }
+
+
+        if (
+          bubble.x >
+          W - RADIUS
+        ) {
+
+          bubble.x =
+            W - RADIUS;
+
+
+          bubble.vx =
+            -Math.abs(
+              bubble.vx
+            ) *
+            0.78;
+
+
+          bubble.squash =
+            0.75;
+
+        }
+
+
+        /*
+          Soft bottom bounce.
+        */
+
+        const floor =
+          Math.min(
+            H - 25,
+            bubble.floorY
+          );
+
+
+        if (
+          bubble.y >= floor
+        ) {
+
+          bubble.y =
+            floor;
+
+
+          if (
+            Math.abs(
+              bubble.vy
+            ) > 100
+          ) {
+
+            bubble.vy =
+              -Math.abs(
+                bubble.vy
+              ) *
+              0.48;
+
+
+            bubble.vx *=
+              0.88;
+
+
+            bubble.squash =
+              1.28;
+
+
+            bubble.stretch =
+              0.78;
+
+
+            createParticles(
+              bubble.x,
+              bubble.y,
+              bubble.color,
+              3
+            );
+
+
+          } else {
+
+            bubble.grounded =
+              true;
+
+          }
+
+        }
+
+      } else {
+
+        /*
+          Tiny final bounce /
+          slide / exit.
+        */
+
+        bubble.vx *=
+          Math.pow(
+            0.35,
+            dt
+          );
+
+
+        bubble.rotation +=
+          bubble.spin *
+          dt *
+          0.35;
+
+
+        bubble.squash +=
+          (
+            1 -
+            bubble.squash
+          ) *
+          Math.min(
+            1,
+            dt * 10
+          );
+
+
+        if (
+          bubble.life >
+          1.5
+        ) {
+
+          bubble.y +=
+            80 * dt;
+
+        }
+
+      }
+
+
+      /*
+        Remove after leaving.
+      */
+
+      if (
+        bubble.y >
+        H + 120
       ) {
 
         fallingBubbles.splice(
@@ -2831,9 +3560,9 @@
     }
 
 
-    /*
-      Particles.
-    */
+    /* --------------------------------------------------------
+       Particles
+    -------------------------------------------------------- */
 
     for (
       let i =
@@ -2880,9 +3609,9 @@
     }
 
 
-    /*
-      Pop effects.
-    */
+    /* --------------------------------------------------------
+       Pops
+    -------------------------------------------------------- */
 
     for (
       let i =
@@ -2891,18 +3620,18 @@
       i--
     ) {
 
-      const p =
+      const effect =
         popEffects[i];
 
 
-      p.life +=
+      effect.life +=
         dt;
 
 
       if (
-        p.life >=
-        p.max +
-        p.delay
+        effect.life >=
+        effect.max +
+        effect.delay
       ) {
 
         popEffects.splice(
@@ -2915,9 +3644,9 @@
     }
 
 
-    /*
-      Rings.
-    */
+    /* --------------------------------------------------------
+       Rings
+    -------------------------------------------------------- */
 
     for (
       let i =
@@ -2949,9 +3678,43 @@
     }
 
 
-    /*
-      Special bursts.
-    */
+    /* --------------------------------------------------------
+       Impacts
+    -------------------------------------------------------- */
+
+    for (
+      let i =
+        impacts.length - 1;
+      i >= 0;
+      i--
+    ) {
+
+      const impact =
+        impacts[i];
+
+
+      impact.life +=
+        dt;
+
+
+      if (
+        impact.life >=
+        impact.max
+      ) {
+
+        impacts.splice(
+          i,
+          1
+        );
+
+      }
+
+    }
+
+
+    /* --------------------------------------------------------
+       Special bursts
+    -------------------------------------------------------- */
 
     for (
       let i =
@@ -3007,6 +3770,7 @@
     ) {
 
       ctx.translate(
+
         (
           Math.random() -
           0.5
@@ -3018,6 +3782,7 @@
           0.5
         ) *
         shake
+
       );
 
     }
@@ -3040,6 +3805,8 @@
     drawPopEffects();
 
     drawRings();
+
+    drawImpacts();
 
     drawParticles();
 
@@ -3097,7 +3864,7 @@
 
 
     /*
-      Subtle Mithila geometry.
+      Subtle pattern.
     */
 
     ctx.save();
@@ -3125,6 +3892,7 @@
 
         ctx.beginPath();
 
+
         ctx.arc(
           x,
           y,
@@ -3133,30 +3901,36 @@
           Math.PI * 2
         );
 
+
         ctx.stroke();
 
 
         ctx.beginPath();
+
 
         ctx.moveTo(
           x - 14,
           y
         );
 
+
         ctx.lineTo(
           x + 14,
           y
         );
+
 
         ctx.moveTo(
           x,
           y - 14
         );
 
+
         ctx.lineTo(
           x,
           y + 14
         );
+
 
         ctx.stroke();
 
@@ -3169,16 +3943,19 @@
 
 
     /*
-      Decorative motifs.
+      Mithila motifs.
     */
 
     ctx.save();
 
+
     ctx.globalAlpha =
       0.065;
 
+
     ctx.font =
       "42px serif";
+
 
     ctx.fillText(
       "🪷",
@@ -3186,11 +3963,13 @@
       215
     );
 
+
     ctx.fillText(
       "🐟",
       410,
       420
     );
+
 
     ctx.fillText(
       "🦚",
@@ -3198,11 +3977,13 @@
       590
     );
 
+
     ctx.fillText(
       "🪷",
       405,
       650
     );
+
 
     ctx.restore();
 
@@ -3250,6 +4031,10 @@
   }
 
 
+  /* ==========================================================
+     CEILING
+  ========================================================== */
+
   function drawCeiling() {
 
     ctx.save();
@@ -3291,7 +4076,7 @@
 
 
   /* ==========================================================
-     DRAW NORMAL BUBBLES
+     BUBBLE DRAW
   ========================================================== */
 
   function drawBubbles() {
@@ -3323,13 +4108,97 @@
           );
 
 
+        let scaleX = 1;
+        let scaleY = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+
+
+        /*
+          Soft wobble.
+        */
+
+        if (
+          bubble.wobble > 0
+        ) {
+
+          const wobble =
+            Math.sin(
+              (
+                bubble.wobble *
+                15
+              )
+            ) *
+            bubble.wobble;
+
+
+          scaleX =
+            1 +
+            wobble *
+            0.045;
+
+
+          scaleY =
+            1 -
+            wobble *
+            0.035;
+
+
+          offsetX =
+            Math.sin(
+              bubble.wobble *
+              19
+            ) *
+            bubble.wobble *
+            2;
+
+        }
+
+
+        /*
+          Soft impact squash.
+        */
+
+        if (
+          bubble.squish > 0
+        ) {
+
+          scaleX *=
+            1 +
+            bubble.squish *
+            0.16;
+
+
+          scaleY *=
+            1 -
+            bubble.squish *
+            0.12;
+
+        }
+
+
+        ctx.save();
+
+
+        ctx.translate(
+          p.x + offsetX,
+          p.y
+        );
+
+
+        ctx.scale(
+          scaleX,
+          scaleY
+        );
+
+
         if (
           bubble.special
         ) {
 
           drawSpecialBubble(
-            p.x,
-            p.y,
+            0,
+            0,
             bubble.special,
             1,
             1
@@ -3338,8 +4207,8 @@
         } else {
 
           drawBubble(
-            p.x,
-            p.y,
+            0,
+            0,
             bubble.color,
             1,
             1
@@ -3347,12 +4216,19 @@
 
         }
 
+
+        ctx.restore();
+
       }
 
     }
 
   }
 
+
+  /* ==========================================================
+     NORMAL BUBBLE
+  ========================================================== */
 
   function drawBubble(
     x,
@@ -3404,13 +4280,13 @@
 
 
     gradient.addColorStop(
-      0.16,
+      .16,
       c.light
     );
 
 
     gradient.addColorStop(
-      0.52,
+      .52,
       c.main
     );
 
@@ -3485,6 +4361,10 @@
   }
 
 
+  /* ==========================================================
+     BUBBLE PATTERN
+  ========================================================== */
+
   function drawBubblePattern(
     pattern,
     c
@@ -3494,7 +4374,7 @@
 
 
     ctx.globalAlpha =
-      0.2;
+      .2;
 
 
     ctx.strokeStyle =
@@ -3515,11 +4395,12 @@
         i++
       ) {
 
-        const angle =
-          -Math.PI * 0.8 +
+        const a =
+          -Math.PI *
+          .8 +
           i *
           Math.PI *
-          0.4;
+          .4;
 
 
         ctx.beginPath();
@@ -3532,10 +4413,10 @@
 
 
         ctx.quadraticCurveTo(
-          Math.cos(angle) * 10,
-          Math.sin(angle) * 8,
-          Math.cos(angle) * 14,
-          Math.sin(angle) * 3
+          Math.cos(a) * 10,
+          Math.sin(a) * 8,
+          Math.cos(a) * 14,
+          Math.sin(a) * 3
         );
 
 
@@ -3630,23 +4511,8 @@
         -6,
         2,
         4,
-        -0.8,
+        -.8,
         1.1
-      );
-
-
-      ctx.stroke();
-
-
-      ctx.beginPath();
-
-
-      ctx.arc(
-        5,
-        -5,
-        4,
-        2.1,
-        -0.3
       );
 
 
@@ -3681,34 +4547,6 @@
         13,
         13,
         5
-      );
-
-
-      ctx.stroke();
-
-
-      ctx.beginPath();
-
-
-      ctx.moveTo(
-        -13,
-        -4
-      );
-
-
-      ctx.quadraticCurveTo(
-        -7,
-        -12,
-        0,
-        -4
-      );
-
-
-      ctx.quadraticCurveTo(
-        7,
-        4,
-        13,
-        -4
       );
 
 
@@ -3794,7 +4632,7 @@
 
 
   /* ==========================================================
-     SPECIAL DRAW
+     SPECIAL BUBBLE
   ========================================================== */
 
   function drawSpecialBubble(
@@ -3849,13 +4687,13 @@
 
 
       gradient.addColorStop(
-        0.2,
+        .2,
         "#b8f3ff"
       );
 
 
       gradient.addColorStop(
-        0.6,
+        .6,
         "#4198dc"
       );
 
@@ -3890,7 +4728,7 @@
 
 
       gradient.addColorStop(
-        0.45,
+        .45,
         "#d94b43"
       );
 
@@ -3923,19 +4761,19 @@
 
 
       gradient.addColorStop(
-        0.25,
+        .25,
         "#ffcf62"
       );
 
 
       gradient.addColorStop(
-        0.5,
+        .5,
         "#70dc96"
       );
 
 
       gradient.addColorStop(
-        0.75,
+        .75,
         "#69b8ff"
       );
 
@@ -3968,13 +4806,13 @@
 
 
       gradient.addColorStop(
-        0.25,
+        .25,
         "#ffe98a"
       );
 
 
       gradient.addColorStop(
-        0.65,
+        .65,
         "#e2a72d"
       );
 
@@ -4066,7 +4904,7 @@
 
 
   /* ==========================================================
-     MOVING BUBBLE
+     MOVING BUBBLE DRAW
   ========================================================== */
 
   function drawMovingBubble() {
@@ -4074,7 +4912,9 @@
     if (
       !movingBubble
     ) {
+
       return;
+
     }
 
 
@@ -4089,7 +4929,7 @@
       i++
     ) {
 
-      const t =
+      const trail =
         movingBubble.trail[i];
 
 
@@ -4098,7 +4938,7 @@
           i + 1
         ) /
         movingBubble.trail.length *
-        0.16;
+        .15;
 
 
       ctx.save();
@@ -4118,8 +4958,8 @@
 
 
       ctx.arc(
-        t.x,
-        t.y,
+        trail.x,
+        trail.y,
         3,
         0,
         Math.PI * 2
@@ -4134,47 +4974,78 @@
     }
 
 
+    /*
+      Soft flying squash.
+    */
+
+    const speed =
+      Math.hypot(
+        movingBubble.vx,
+        movingBubble.vy
+      );
+
+
+    const stretch =
+      1 +
+      Math.min(
+        .15,
+        speed /
+        6000
+      );
+
+
+    ctx.save();
+
+
+    ctx.translate(
+      movingBubble.x,
+      movingBubble.y
+    );
+
+
+    ctx.rotate(
+      movingBubble.rotation
+    );
+
+
+    ctx.scale(
+      1 / stretch,
+      stretch
+    );
+
+
     if (
       movingBubble.special
     ) {
 
       drawSpecialBubble(
-
-        movingBubble.x,
-
-        movingBubble.y,
-
+        0,
+        0,
         movingBubble.special,
-
         movingBubble.scale,
-
         1
-
       );
 
     } else {
 
       drawBubble(
-
-        movingBubble.x,
-
-        movingBubble.y,
-
+        0,
+        0,
         movingBubble.color,
-
         movingBubble.scale,
-
         1
-
       );
 
     }
+
+
+    ctx.restore();
 
   }
 
 
   /* ==========================================================
-     FALLING BUBBLES
+     FALLING DRAW
   ========================================================== */
 
   function drawFallingBubbles() {
@@ -4184,6 +5055,44 @@
       of fallingBubbles
     ) {
 
+      const fallSpeed =
+        Math.abs(
+          bubble.vy
+        );
+
+
+      let stretch =
+        1 +
+        Math.min(
+          .23,
+          fallSpeed /
+          1700
+        );
+
+
+      let squash =
+        1 /
+        stretch;
+
+
+      /*
+        Extra squash during bounce.
+      */
+
+      if (
+        bubble.squash > 1
+      ) {
+
+        squash *=
+          bubble.squash;
+
+
+        stretch /=
+          bubble.squash;
+
+      }
+
+
       ctx.save();
 
 
@@ -4192,7 +5101,7 @@
           0,
           1 -
           bubble.life *
-          0.65
+          .42
         );
 
 
@@ -4208,8 +5117,10 @@
 
 
       ctx.scale(
-        bubble.scale,
-        bubble.scale
+        bubble.scale *
+        squash,
+        bubble.scale *
+        stretch
       );
 
 
@@ -4257,7 +5168,9 @@
       gameEnded ||
       levelWon
     ) {
+
       return;
+
     }
 
 
@@ -4419,10 +5332,6 @@
     ctx.fill();
 
 
-    /*
-      Side fins.
-    */
-
     const metal =
       ctx.createLinearGradient(
         0,
@@ -4439,7 +5348,7 @@
 
 
     metal.addColorStop(
-      0.45,
+      .45,
       "#527fb7"
     );
 
@@ -4508,10 +5417,6 @@
     ctx.fill();
 
 
-    /*
-      Cannon body.
-    */
-
     ctx.beginPath();
 
 
@@ -4537,10 +5442,6 @@
 
     ctx.stroke();
 
-
-    /*
-      Barrel.
-    */
 
     ctx.fillStyle =
       "#10294e";
@@ -4584,8 +5485,28 @@
     ctx.stroke();
 
 
+    ctx.fillStyle =
+      "#e2efff";
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      0,
+      17,
+      6,
+      0,
+      Math.PI * 2
+    );
+
+
+    ctx.fill();
+
+
     /*
-      Current bubble.
+      Current bubble sits softly
+      inside the launcher.
     */
 
     if (
@@ -4619,7 +5540,7 @@
 
 
   /* ==========================================================
-     POP EFFECTS
+     POP EFFECT
   ========================================================== */
 
   function easeOutBack(t) {
@@ -4675,7 +5596,9 @@
       if (
         t <= 0
       ) {
+
         continue;
+
       }
 
 
@@ -4683,35 +5606,54 @@
         1 - t;
 
 
-      const scale =
-        1 +
-        easeOutBack(
-          t
-        ) *
-        0.55;
+      /*
+        Squash first, then expand.
+      */
+
+      let sx;
+      let sy;
 
 
       if (
-        effect.special
+        t < .18
       ) {
 
-        drawSpecialBubble(
-          effect.x,
-          effect.y,
-          effect.special,
-          scale,
-          alpha
-        );
+        const squeeze =
+          t / .18;
+
+
+        sx =
+          1 +
+          squeeze *
+          .18;
+
+
+        sy =
+          1 -
+          squeeze *
+          .13;
 
       } else {
 
-        drawBubble(
-          effect.x,
-          effect.y,
-          effect.color,
-          scale,
-          alpha
-        );
+        const expand =
+          easeOutBack(
+            (
+              t - .18
+            ) /
+            .82
+          );
+
+
+        sx =
+          1 +
+          expand *
+          .58;
+
+
+        sy =
+          1 +
+          expand *
+          .58;
 
       }
 
@@ -4720,35 +5662,44 @@
 
 
       ctx.globalAlpha =
-        alpha *
-        0.7;
+        alpha;
 
 
-      ctx.strokeStyle =
-        COLORS[
-          effect.color
-        ].light;
-
-
-      ctx.lineWidth =
-        2.5 *
-        (1 - t);
-
-
-      ctx.beginPath();
-
-
-      ctx.arc(
+      ctx.translate(
         effect.x,
-        effect.y,
-        RADIUS +
-        t * 25,
-        0,
-        Math.PI * 2
+        effect.y
       );
 
 
-      ctx.stroke();
+      ctx.scale(
+        sx,
+        sy
+      );
+
+
+      if (
+        effect.special
+      ) {
+
+        drawSpecialBubble(
+          0,
+          0,
+          effect.special,
+          1,
+          1
+        );
+
+      } else {
+
+        drawBubble(
+          0,
+          0,
+          effect.color,
+          1,
+          1
+        );
+
+      }
 
 
       ctx.restore();
@@ -4792,7 +5743,10 @@
 
       ctx.lineWidth =
         3 *
-        (1 - t);
+        (
+          1 -
+          t
+        );
 
 
       ctx.beginPath();
@@ -4802,7 +5756,77 @@
         ring.x,
         ring.y,
         18 +
-        t * 38,
+        t * 40,
+        0,
+        Math.PI * 2
+      );
+
+
+      ctx.stroke();
+
+
+      ctx.restore();
+
+    }
+
+  }
+
+
+  /* ==========================================================
+     IMPACTS
+  ========================================================== */
+
+  function drawImpacts() {
+
+    for (
+      const impact
+      of impacts
+    ) {
+
+      const t =
+        Math.min(
+          1,
+          impact.life /
+          impact.max
+        );
+
+
+      const radius =
+        8 +
+        t *
+        28;
+
+
+      ctx.save();
+
+
+      ctx.globalAlpha =
+        (
+          1 -
+          t
+        ) *
+        .65;
+
+
+      ctx.strokeStyle =
+        "#ffffff";
+
+
+      ctx.lineWidth =
+        2.5 *
+        (
+          1 -
+          t
+        );
+
+
+      ctx.beginPath();
+
+
+      ctx.arc(
+        impact.x,
+        impact.y,
+        radius,
         0,
         Math.PI * 2
       );
@@ -4897,16 +5921,15 @@
         burst.type === "laser"
       ) {
 
-        /*
-          Expanding cross flash.
-        */
-
         ctx.save();
 
 
         ctx.globalAlpha =
-          (1 - t) *
-          0.8;
+          (
+            1 -
+            t
+          ) *
+          .82;
 
 
         ctx.strokeStyle =
@@ -4972,34 +5995,31 @@
 
         ctx.restore();
 
-      }
-
-
-      else {
+      } else {
 
         const color =
           burst.type === "bomb"
-
             ? "#ff6b58"
-
             : burst.type === "rainbow"
-
               ? "#ffffff"
-
               : "#ffe47b";
 
 
         const radius =
           18 +
-          t * 85;
+          t *
+          90;
 
 
         ctx.save();
 
 
         ctx.globalAlpha =
-          (1 - t) *
-          0.68;
+          (
+            1 -
+            t
+          ) *
+          .68;
 
 
         ctx.strokeStyle =
@@ -5008,7 +6028,10 @@
 
         ctx.lineWidth =
           4 *
-          (1 - t);
+          (
+            1 -
+            t
+          );
 
 
         ctx.beginPath();
@@ -5033,259 +6056,6 @@
     }
 
   }
-
-
-  /* ==========================================================
-     AIM INPUT
-  ========================================================== */
-
-  function updateAim(
-    clientX,
-    clientY
-  ) {
-
-    const rect =
-      canvas.getBoundingClientRect();
-
-
-    aimX =
-      (
-        clientX -
-        rect.left
-      ) *
-      W /
-      rect.width;
-
-
-    aimY =
-      (
-        clientY -
-        rect.top
-      ) *
-      H /
-      rect.height;
-
-
-    aimX =
-      Math.max(
-        5,
-        Math.min(
-          W - 5,
-          aimX
-        )
-      );
-
-
-    aimY =
-      Math.max(
-        80,
-        Math.min(
-          SHOOTER_Y - 25,
-          aimY
-        )
-      );
-
-  }
-
-
-  /* ==========================================================
-     TOUCH / POINTER CONTROL
-
-     TAP + RELEASE = SHOOT
-     HOLD + MOVE = AIM
-     RELEASE = LAUNCH
-  ========================================================== */
-
-  let pointerHolding =
-    false;
-
-  let activePointerId =
-    null;
-
-
-  /*
-    Pointer move is always allowed so
-    the aim can follow the finger.
-  */
-
-  canvas.addEventListener(
-    "pointermove",
-    event => {
-
-      if (
-        busy ||
-        paused ||
-        gameEnded ||
-        levelWon ||
-        ceilingAnimation
-      ) {
-
-        return;
-
-      }
-
-
-      updateAim(
-        event.clientX,
-        event.clientY
-      );
-
-    }
-  );
-
-
-  /*
-    Touch starts aiming.
-    IMPORTANT:
-    No shoot() here.
-  */
-
-  canvas.addEventListener(
-    "pointerdown",
-    event => {
-
-      if (
-        busy ||
-        paused ||
-        gameEnded ||
-        levelWon ||
-        ceilingAnimation
-      ) {
-
-        return;
-
-      }
-
-
-      event.preventDefault();
-
-
-      pointerHolding =
-        true;
-
-
-      activePointerId =
-        event.pointerId;
-
-
-      updateAim(
-        event.clientX,
-        event.clientY
-      );
-
-
-      try {
-
-        canvas.setPointerCapture(
-          event.pointerId
-        );
-
-      } catch {}
-
-    }
-  );
-
-
-  /*
-    Bubble launches only when
-    the finger is released.
-  */
-
-  canvas.addEventListener(
-    "pointerup",
-    event => {
-
-      if (
-        !pointerHolding
-      ) {
-
-        return;
-
-      }
-
-
-      if (
-        activePointerId !==
-        null &&
-        event.pointerId !==
-        activePointerId
-      ) {
-
-        return;
-
-      }
-
-
-      event.preventDefault();
-
-
-      updateAim(
-        event.clientX,
-        event.clientY
-      );
-
-
-      pointerHolding =
-        false;
-
-
-      activePointerId =
-        null;
-
-
-      try {
-
-        canvas.releasePointerCapture(
-          event.pointerId
-        );
-
-      } catch {}
-
-
-      shoot();
-
-    }
-  );
-
-
-  /*
-    Cancelled touch = no shot.
-  */
-
-  canvas.addEventListener(
-    "pointercancel",
-    event => {
-
-      if (
-        activePointerId !==
-        null &&
-        event.pointerId !==
-        activePointerId
-      ) {
-
-        return;
-
-      }
-
-
-      pointerHolding =
-        false;
-
-
-      activePointerId =
-        null;
-
-
-      try {
-
-        canvas.releasePointerCapture(
-          event.pointerId
-        );
-
-      } catch {}
-
-    }
-  );
 
 
   /* ==========================================================
@@ -5445,7 +6215,6 @@
 
 
     element.style.background =
-
       `radial-gradient(
         circle at 30% 25%,
         #ffffff 0%,
@@ -5478,7 +6247,7 @@
 
 
   /* ==========================================================
-     SCREEN
+     SCREENS
   ========================================================== */
 
   function showScreen(
@@ -5559,9 +6328,7 @@
       ) {
 
         button.innerHTML =
-
           `${level}` +
-
           (
             completed
               ? `<span class="level-star">⭐</span>`
@@ -5685,7 +6452,7 @@
 
 
   /* ==========================================================
-     AUDIO
+     SOUND
   ========================================================== */
 
   function initAudio() {
@@ -5732,7 +6499,7 @@
     frequency,
     duration,
     type = "sine",
-    volume = 0.03
+    volume = .03
   ) {
 
     if (
@@ -5783,7 +6550,7 @@
 
 
       gain.gain.exponentialRampToValueAtTime(
-        0.001,
+        .001,
         audioContext.currentTime +
         duration
       );
@@ -5853,7 +6620,6 @@
 
 
     resultText.textContent =
-
       success
 
         ? (
@@ -5873,7 +6639,6 @@
 
 
     resultPrimaryBtn.textContent =
-
       success
 
         ? (
@@ -6011,6 +6776,228 @@
 
 
   /* ==========================================================
+     TOUCH / POINTER
+  ========================================================== */
+
+  canvas.addEventListener(
+    "pointermove",
+    event => {
+
+      if (
+        busy ||
+        paused ||
+        gameEnded ||
+        levelWon ||
+        ceilingAnimation
+      ) {
+
+        return;
+
+      }
+
+
+      updateAim(
+        event.clientX,
+        event.clientY
+      );
+
+    }
+  );
+
+
+  canvas.addEventListener(
+    "pointerdown",
+    event => {
+
+      if (
+        busy ||
+        paused ||
+        gameEnded ||
+        levelWon ||
+        ceilingAnimation
+      ) {
+
+        return;
+
+      }
+
+
+      event.preventDefault();
+
+
+      pointerHolding =
+        true;
+
+
+      activePointerId =
+        event.pointerId;
+
+
+      updateAim(
+        event.clientX,
+        event.clientY
+      );
+
+
+      try {
+
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+
+      } catch {}
+
+    }
+  );
+
+
+  canvas.addEventListener(
+    "pointerup",
+    event => {
+
+      if (
+        !pointerHolding
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        activePointerId !==
+        null &&
+        event.pointerId !==
+        activePointerId
+      ) {
+
+        return;
+
+      }
+
+
+      event.preventDefault();
+
+
+      updateAim(
+        event.clientX,
+        event.clientY
+      );
+
+
+      pointerHolding =
+        false;
+
+
+      activePointerId =
+        null;
+
+
+      try {
+
+        canvas.releasePointerCapture(
+          event.pointerId
+        );
+
+      } catch {}
+
+
+      shoot();
+
+    }
+  );
+
+
+  canvas.addEventListener(
+    "pointercancel",
+    event => {
+
+      if (
+        activePointerId !==
+        null &&
+        event.pointerId !==
+        activePointerId
+      ) {
+
+        return;
+
+      }
+
+
+      pointerHolding =
+        false;
+
+
+      activePointerId =
+        null;
+
+
+      try {
+
+        canvas.releasePointerCapture(
+          event.pointerId
+        );
+
+      } catch {}
+
+    }
+  );
+
+
+  /* ==========================================================
+     AIM
+  ========================================================== */
+
+  function updateAim(
+    clientX,
+    clientY
+  ) {
+
+    const rect =
+      canvas.getBoundingClientRect();
+
+
+    aimX =
+      (
+        clientX -
+        rect.left
+      ) *
+      W /
+      rect.width;
+
+
+    aimY =
+      (
+        clientY -
+        rect.top
+      ) *
+      H /
+      rect.height;
+
+
+    aimX =
+      Math.max(
+        5,
+        Math.min(
+          W - 5,
+          aimX
+        )
+      );
+
+
+    aimY =
+      Math.max(
+        80,
+        Math.min(
+          SHOOTER_Y - 25,
+          aimY
+        )
+      );
+
+  }
+
+
+  /* ==========================================================
      VISIBILITY
   ========================================================== */
 
@@ -6040,7 +7027,7 @@
 
     const dt =
       Math.min(
-        0.033,
+        .033,
         (
           timestamp -
           lastTime
@@ -6076,7 +7063,7 @@
 
 
   /* ==========================================================
-     INITIALIZE
+     INIT
   ========================================================== */
 
   updateUI();
