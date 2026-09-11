@@ -1,15 +1,5 @@
-/* ============================================================
-   BULBULE KA KHEL
-   PREMIUM MITHILA BUBBLE SHOOTER
-   SOFT / BOUNCY EDITION
-   ============================================================ */
-
 (() => {
   "use strict";
-
-  /* ==========================================================
-     DOM
-  ========================================================== */
 
   const $ = id => document.getElementById(id);
 
@@ -53,27 +43,15 @@
 
   const message = $("message");
 
-
-  /* ==========================================================
-     CANVAS
-  ========================================================== */
-
   const W = 480;
   const H = 760;
 
   canvas.width = W;
   canvas.height = H;
 
-
-  /* ==========================================================
-     GAME SETTINGS
-  ========================================================== */
-
   const COLS = 11;
-
   const RADIUS = 20;
   const DIAMETER = 40;
-
   const ROW_HEIGHT = 35;
   const TOP_Y = 48;
 
@@ -85,15 +63,9 @@
   const MAX_LEVEL = 50;
   const MISS_LIMIT = 3;
 
-  const MAX_SPECIALS_PER_LEVEL = 2;
-
-
-  /* ==========================================================
-     COLORS
-  ========================================================== */
+  const SAVE_KEY = "bulbuleKaKhelSave";
 
   const COLORS = [
-
     {
       name: "red",
       main: "#dc5267",
@@ -101,7 +73,6 @@
       dark: "#86283d",
       pattern: "lotus"
     },
-
     {
       name: "yellow",
       main: "#ddc34e",
@@ -109,7 +80,6 @@
       dark: "#94751c",
       pattern: "sun"
     },
-
     {
       name: "green",
       main: "#59aa76",
@@ -117,7 +87,6 @@
       dark: "#275e43",
       pattern: "leaf"
     },
-
     {
       name: "blue",
       main: "#5791d0",
@@ -125,7 +94,6 @@
       dark: "#28588f",
       pattern: "wave"
     },
-
     {
       name: "purple",
       main: "#9569c3",
@@ -133,7 +101,6 @@
       dark: "#553080",
       pattern: "peacock"
     },
-
     {
       name: "pink",
       main: "#d57698",
@@ -141,147 +108,25 @@
       dark: "#873d5b",
       pattern: "flower"
     }
-
   ];
 
-
-  /* ==========================================================
-     SPECIALS
-  ========================================================== */
-
-  const SPECIAL = {
-
-    laser: {
-      icon: "⚡"
-    },
-
-    bomb: {
-      icon: "💣"
-    },
-
-    rainbow: {
-      icon: "🌈"
-    },
-
-    sun: {
-      icon: "☀"
-    }
-
+  const SPECIAL_ICONS = {
+    laser: "⚡",
+    bomb: "💣",
+    rainbow: "🌈",
+    sun: "☀"
   };
 
+  const defaultSave = {
+    currentLevel: 1,
+    unlocked: 1,
+    completed: [],
+    bestScores: {},
+    best: 0,
+    sound: true
+  };
 
-  /* ==========================================================
-     SAVE
-  ========================================================== */
-
-  const SAVE_KEY =
-    "bulbuleKaKhelSave";
-
-
-  let save =
-    loadSave();
-
-
-  function loadSave() {
-
-    const fallback = {
-
-      currentLevel: 1,
-      unlocked: 1,
-      completed: [],
-      bestScores: {},
-      score: 0,
-      best: 0,
-      sound: true
-
-    };
-
-
-    try {
-
-      const raw =
-        localStorage.getItem(
-          SAVE_KEY
-        );
-
-
-      if (!raw)
-        return fallback;
-
-
-      const data =
-        JSON.parse(raw);
-
-
-      return {
-
-        ...fallback,
-        ...data,
-
-        currentLevel:
-          Number(
-            data.currentLevel || 1
-          ),
-
-        unlocked:
-          Math.max(
-            1,
-            Number(
-              data.unlocked || 1
-            )
-          ),
-
-        completed:
-          Array.isArray(
-            data.completed
-          )
-            ? data.completed
-            : [],
-
-        bestScores:
-          data.bestScores || {},
-
-        score:
-          Number(
-            data.score || 0
-          ),
-
-        best:
-          Number(
-            data.best || 0
-          ),
-
-        sound:
-          data.sound !== false
-
-      };
-
-    } catch {
-
-      return fallback;
-
-    }
-
-  }
-
-
-  function saveGame() {
-
-    try {
-
-      localStorage.setItem(
-        SAVE_KEY,
-        JSON.stringify(save)
-      );
-
-    } catch {}
-
-  }
-
-
-  /* ==========================================================
-     STATE
-  ========================================================== */
+  let save = loadSave();
 
   let grid = [];
 
@@ -304,38 +149,103 @@
 
   let fallingBubbles = [];
 
-  let popEffects = [];
-
   let particles = [];
-
+  let popEffects = [];
   let rings = [];
-
-  let specialBursts = [];
-
   let impacts = [];
-
-  let wobbleEffects = [];
+  let specialBursts = [];
+  let bubbleWobbles = [];
 
   let ceilingAnimation = null;
 
   let launcherRecoil = 0;
   let launcherBounce = 0;
-
   let shake = 0;
 
-  let specialCount = 0;
-
-  let aimX = W / 2;
-  let aimY = 280;
-
-  let lastTime = 0;
-
-  let audioContext = null;
-
-  /* Touch state */
+  let aimX = SHOOTER_X;
+  let aimY = 300;
 
   let pointerHolding = false;
   let activePointerId = null;
+
+  let audioContext = null;
+
+  /*
+    Special ball scheduler:
+    Every 8th or 9th shot approximately.
+  */
+  let shotsToSpecial =
+    8 + Math.floor(Math.random() * 2);
+
+  let lastTime = 0;
+
+
+  /* ==========================================================
+     SAVE
+  ========================================================== */
+
+  function loadSave() {
+    try {
+      const raw =
+        localStorage.getItem(SAVE_KEY);
+
+      if (!raw) {
+        return {
+          ...defaultSave,
+          completed: [],
+          bestScores: {}
+        };
+      }
+
+      const data =
+        JSON.parse(raw);
+
+      return {
+        ...defaultSave,
+        ...data,
+
+        currentLevel:
+          Number(data.currentLevel || 1),
+
+        unlocked:
+          Math.max(
+            1,
+            Number(data.unlocked || 1)
+          ),
+
+        completed:
+          Array.isArray(data.completed)
+            ? data.completed
+            : [],
+
+        bestScores:
+          data.bestScores || {},
+
+        best:
+          Number(data.best || 0),
+
+        sound:
+          data.sound !== false
+      };
+
+    } catch {
+      return {
+        ...defaultSave,
+        completed: [],
+        bestScores: {}
+      };
+    }
+  }
+
+
+  function saveGame() {
+    try {
+      localStorage.setItem(
+        SAVE_KEY,
+        JSON.stringify(save)
+      );
+    } catch {}
+  }
 
 
   /* ==========================================================
@@ -347,39 +257,28 @@
     const level =
       save.currentLevel;
 
-
-    let rows = 6;
-
-    if (level >= 11)
-      rows = 7;
-
-    if (level >= 21)
-      rows = 8;
-
-    if (level >= 31)
-      rows = 9;
-
-    if (level >= 41)
-      rows = 10;
-
-
-    let colors = 3;
-
-    if (level >= 7)
-      colors = 4;
-
-    if (level >= 17)
-      colors = 5;
-
-    if (level >= 31)
-      colors = 6;
-
-
     return {
-      rows,
-      colors
-    };
 
+      rows:
+        level >= 41
+          ? 10
+          : level >= 31
+            ? 9
+            : level >= 21
+              ? 8
+              : level >= 11
+                ? 7
+                : 6,
+
+      colors:
+        level >= 31
+          ? 6
+          : level >= 17
+            ? 5
+            : level >= 7
+              ? 4
+              : 3
+    };
   }
 
 
@@ -389,70 +288,46 @@
       Math.random() *
       levelConfig().colors
     );
-
   }
 
 
   /* ==========================================================
-     SPECIAL CHOICE
+     SPECIAL BUBBLE
   ========================================================== */
 
-  function chooseSpecial() {
+  function createSpecialForShot() {
 
     if (
       save.currentLevel < 4
     ) {
-
       return null;
-
     }
-
 
     if (
-      specialCount >=
-      MAX_SPECIALS_PER_LEVEL
+      shotsToSpecial > 0
     ) {
-
       return null;
-
     }
 
+    shotsToSpecial =
+      8 +
+      Math.floor(
+        Math.random() * 2
+      );
 
-    /*
-      Rare enough that normal
-      balls remain dominant.
-    */
+    const types = [
+      "laser",
+      "bomb",
+      "rainbow",
+      "sun"
+    ];
 
-    if (
-      Math.random() > 0.055
-    ) {
-
-      return null;
-
-    }
-
-
-    specialCount++;
-
-
-    const roll =
-      Math.random();
-
-
-    if (roll < 0.34)
-      return "laser";
-
-
-    if (roll < 0.66)
-      return "bomb";
-
-
-    if (roll < 0.88)
-      return "rainbow";
-
-
-    return "sun";
-
+    return types[
+      Math.floor(
+        Math.random() *
+        types.length
+      )
+    ];
   }
 
 
@@ -463,19 +338,23 @@
       color:
         randomColor(),
 
-      special:
-        chooseSpecial(),
+      special: null,
 
       squish: 0,
-      wobble: 0
+
+      wobble: 0,
+
+      phase:
+        Math.random() *
+        Math.PI *
+        2
 
     };
-
   }
 
 
   /* ==========================================================
-     GRID
+     CREATE LEVEL
   ========================================================== */
 
   function createLevel() {
@@ -483,11 +362,40 @@
     const config =
       levelConfig();
 
-
     grid = [];
 
-    specialCount = 0;
+    score = 0;
+    missedShots = 0;
 
+    busy = false;
+    paused = false;
+
+    gameEnded = false;
+    levelWon = false;
+
+    movingBubble = null;
+
+    fallingBubbles = [];
+
+    particles = [];
+    popEffects = [];
+    rings = [];
+    impacts = [];
+    specialBursts = [];
+    bubbleWobbles = [];
+
+    ceilingAnimation = null;
+
+    launcherRecoil = 0;
+    launcherBounce = 0;
+
+    shake = 0;
+
+    shotsToSpecial =
+      8 +
+      Math.floor(
+        Math.random() * 2
+      );
 
     for (
       let r = 0;
@@ -496,7 +404,6 @@
     ) {
 
       const row = [];
-
 
       for (
         let q = 0;
@@ -507,37 +414,27 @@
         let bubble =
           makeBubble();
 
-
-        /*
-          Slight empty spaces only
-          after early levels.
-        */
-
         if (
           r > 1 &&
           save.currentLevel >= 8 &&
-          Math.random() < 0.045
+          Math.random() < 0.05
         ) {
 
           bubble = null;
 
         }
 
-
         row.push(
           bubble
         );
-
       }
 
-
       grid.push(row);
-
     }
 
 
     /*
-      Top row must be solid enough.
+      Ensure top row has support.
     */
 
     for (
@@ -560,55 +457,25 @@
 
     removeStartingMatches();
 
-
     currentColor =
       randomColor();
-
 
     nextColor =
       randomColor();
 
-
     currentSpecial = null;
     nextSpecial = null;
 
+    aimX =
+      SHOOTER_X;
 
-    score = 0;
-    missedShots = 0;
-
-    busy = false;
-    paused = false;
-
-    gameEnded = false;
-    levelWon = false;
-
-    movingBubble = null;
-
-    fallingBubbles = [];
-
-    popEffects = [];
-    particles = [];
-    rings = [];
-
-    specialBursts = [];
-    impacts = [];
-    wobbleEffects = [];
-
-    ceilingAnimation = null;
-
-    launcherRecoil = 0;
-    launcherBounce = 0;
-
-    shake = 0;
-
+    aimY = 300;
 
     updateUI();
 
-
     showMessage(
-      "निशाना लगाइए और बुलबुला छोड़िए"
+      "निशाना लगाइए"
     );
-
   }
 
 
@@ -616,12 +483,11 @@
 
     for (
       let pass = 0;
-      pass < 10;
+      pass < 8;
       pass++
     ) {
 
       let changed = false;
-
 
       for (
         let r = 0;
@@ -638,16 +504,12 @@
           const bubble =
             grid[r][q];
 
-
           if (
             !bubble ||
             bubble.special
           ) {
-
             continue;
-
           }
-
 
           const group =
             findCluster(
@@ -655,7 +517,6 @@
               r,
               bubble.color
             );
-
 
           if (
             group.length >= 3
@@ -669,61 +530,42 @@
                 )
               ];
 
-
             grid[
               target[1]
             ][
               target[0]
-            ] = {
-
-              color:
-                randomColor(),
-
-              special:
-                null,
-
-              squish: 0,
-              wobble: 0
-
-            };
-
+            ] =
+              makeBubble();
 
             changed = true;
-
           }
 
         }
-
       }
 
-
-      if (!changed)
+      if (!changed) {
         break;
-
+      }
     }
-
   }
 
 
   /* ==========================================================
-     POSITION
+     GRID POSITION
   ========================================================== */
 
-  function getX(
-    q,
-    r
-  ) {
+  function getX(q, r) {
 
     return (
       RADIUS +
-      q * DIAMETER +
+      q *
+      DIAMETER +
       (
         r % 2
           ? RADIUS
           : 0
       )
     );
-
   }
 
 
@@ -731,34 +573,25 @@
 
     return (
       TOP_Y +
-      r * ROW_HEIGHT
+      r *
+      ROW_HEIGHT
     );
-
   }
 
 
-  function getPosition(
-    q,
-    r
-  ) {
+  function position(q, r) {
 
     return {
-
       x:
         getX(q, r),
 
       y:
         getY(r)
-
     };
-
   }
 
 
-  function inside(
-    q,
-    r
-  ) {
+  function inside(q, r) {
 
     return (
       q >= 0 &&
@@ -766,20 +599,15 @@
       r >= 0 &&
       r < grid.length
     );
-
   }
 
 
-  function getNeighbors(
-    q,
-    r
-  ) {
+  function neighbors(q, r) {
 
     const odd =
       r % 2 === 1;
 
-
-    const offsets = odd
+    const dirs = odd
 
       ? [
           [-1, 0],
@@ -799,8 +627,7 @@
           [0, 1]
         ];
 
-
-    return offsets
+    return dirs
       .map(
         ([dq, dr]) =>
           [
@@ -815,7 +642,6 @@
             nr
           )
       );
-
   }
 
 
@@ -829,30 +655,15 @@
     color
   ) {
 
-    if (
-      !inside(
-        startQ,
-        startR
-      )
-    ) {
-
-      return [];
-
-    }
-
-
     const start =
-      grid[startR][startQ];
-
+      grid[startR]?.[startQ];
 
     if (
       !start ||
       start.special ||
       start.color !== color
     ) {
-
       return [];
-
     }
 
 
@@ -860,10 +671,8 @@
       [startQ, startR]
     ];
 
-
-    const visited =
+    const seen =
       new Set();
-
 
     const result = [];
 
@@ -878,76 +687,57 @@
       ] =
         stack.pop();
 
-
       const key =
-        `${q},${r}`;
-
+        q + "," + r;
 
       if (
-        visited.has(key)
+        seen.has(key)
       ) {
-
         continue;
-
       }
 
-
-      visited.add(
-        key
-      );
-
+      seen.add(key);
 
       const bubble =
         grid[r]?.[q];
-
 
       if (
         !bubble ||
         bubble.special ||
         bubble.color !== color
       ) {
-
         continue;
-
       }
-
 
       result.push(
         [q, r]
       );
 
-
       for (
-        const [
-          nq,
-          nr
-        ]
-        of getNeighbors(q, r)
+        const neighbour
+        of neighbors(q, r)
       ) {
 
         stack.push(
-          [nq, nr]
+          neighbour
         );
 
       }
-
     }
 
 
     return result;
-
   }
 
 
   /* ==========================================================
-     CEILING CONNECTION
+     CONNECTED TO CEILING
   ========================================================== */
 
   function connectedToCeiling() {
 
-    const connected =
+    const result =
       new Set();
-
 
     const stack = [];
 
@@ -962,17 +752,15 @@
         grid[0]?.[q]
       ) {
 
-        connected.add(
-          `${q},0`
+        result.add(
+          q + ",0"
         );
-
 
         stack.push(
           [q, 0]
         );
 
       }
-
     }
 
 
@@ -986,58 +774,45 @@
       ] =
         stack.pop();
 
-
       for (
         const [
           nq,
           nr
         ]
-        of getNeighbors(q, r)
+        of neighbors(q, r)
       ) {
 
         if (
           !grid[nr]?.[nq]
         ) {
-
           continue;
-
         }
-
 
         const key =
-          `${nq},${nr}`;
-
+          nq + "," + nr;
 
         if (
-          connected.has(key)
+          !result.has(key)
         ) {
 
-          continue;
+          result.add(key);
+
+          stack.push(
+            [nq, nr]
+          );
 
         }
 
-
-        connected.add(
-          key
-        );
-
-
-        stack.push(
-          [nq, nr]
-        );
-
       }
-
     }
 
 
-    return connected;
-
+    return result;
   }
 
 
   /* ==========================================================
-     BEST ATTACHMENT
+     ATTACHMENT
   ========================================================== */
 
   function findBestAttachment(
@@ -1046,12 +821,14 @@
   ) {
 
     let best = null;
-    let bestDistance = Infinity;
+
+    let bestDistance =
+      Infinity;
 
 
     /*
-      First look only at empty cells
-      touching another bubble.
+      Prefer cells connected
+      to existing bubbles.
     */
 
     for (
@@ -1069,21 +846,15 @@
         if (
           grid[r][q]
         ) {
-
           continue;
-
         }
 
 
-        const neighbors =
-          getNeighbors(
+        const hasNeighbor =
+          neighbors(
             q,
             r
-          );
-
-
-        const attached =
-          neighbors.some(
+          ).some(
             ([nq, nr]) =>
               Boolean(
                 grid[nr]?.[nq]
@@ -1092,7 +863,8 @@
 
 
         if (
-          !attached
+          !hasNeighbor &&
+          r !== 0
         ) {
 
           continue;
@@ -1101,13 +873,13 @@
 
 
         const p =
-          getPosition(
+          position(
             q,
             r
           );
 
 
-        const d =
+        const distance =
           Math.hypot(
             p.x - x,
             p.y - y
@@ -1115,70 +887,17 @@
 
 
         if (
-          d <
+          distance <
           bestDistance
         ) {
 
-          bestDistance = d;
-          best = [q, r];
+          bestDistance =
+            distance;
 
-        }
-
-      }
-
-    }
-
-
-    /*
-      Fallback.
-    */
-
-    if (!best) {
-
-      for (
-        let r = 0;
-        r < grid.length;
-        r++
-      ) {
-
-        for (
-          let q = 0;
-          q < COLS;
-          q++
-        ) {
-
-          if (
-            grid[r][q]
-          ) {
-
-            continue;
-
-          }
-
-
-          const p =
-            getPosition(
-              q,
-              r
-            );
-
-
-          const d =
-            Math.hypot(
-              p.x - x,
-              p.y - y
-            );
-
-
-          if (
-            d <
-            bestDistance
-          ) {
-
-            bestDistance = d;
-            best = [q, r];
-
-          }
+          best = [
+            q,
+            r
+          ];
 
         }
 
@@ -1206,7 +925,6 @@
 
 
     return best;
-
   }
 
 
@@ -1221,9 +939,7 @@
       paused ||
       gameEnded ||
       levelWon ||
-      ceilingAnimation ||
-      !movingBubble
-        && false
+      ceilingAnimation
     ) {
       return;
     }
@@ -1231,9 +947,7 @@
 
     initAudio();
 
-
     busy = true;
-
 
     launcherRecoil = 1;
     launcherBounce = 1;
@@ -1265,8 +979,7 @@
       ) || 1;
 
 
-    const speed =
-      880;
+    const speed = 820;
 
 
     movingBubble = {
@@ -1278,17 +991,13 @@
         SHOOTER_Y - 4,
 
       vx:
-        (
-          dx /
-          distance
-        ) *
+        dx /
+        distance *
         speed,
 
       vy:
-        (
-          dy /
-          distance
-        ) *
+        dy /
+        distance *
         speed,
 
       color:
@@ -1300,8 +1009,7 @@
       scale:
         0.82,
 
-      squash:
-        0,
+      squash: 0,
 
       rotation: 0,
 
@@ -1310,20 +1018,34 @@
     };
 
 
+    /*
+      One shot consumed.
+    */
+
+    shotsToSpecial--;
+
+
+    /*
+      Current -> next
+    */
+
     currentColor =
       nextColor;
-
 
     currentSpecial =
       nextSpecial;
 
+
+    /*
+      Next bubble.
+    */
 
     nextColor =
       randomColor();
 
 
     nextSpecial =
-      chooseSpecial();
+      createSpecialForShot();
 
 
     updateUI();
@@ -1335,22 +1057,19 @@
       "sine",
       0.025
     );
-
   }
 
 
   /* ==========================================================
-     FINISH SHOT
+     FINISH MOVING BUBBLE
   ========================================================== */
 
-  function finishMovingBubble() {
+  function finishShot() {
 
     if (
       !movingBubble
     ) {
-
       return;
-
     }
 
 
@@ -1368,29 +1087,35 @@
       );
 
 
-    const attached = {
+    const bubble = {
 
       color:
         shot.color,
 
       special:
-        shot.special || null,
+        shot.special ||
+        null,
 
       squish:
-        0.95,
+        1,
 
       wobble:
-        0
+        1,
+
+      phase:
+        Math.random() *
+        Math.PI *
+        2
 
     };
 
 
     grid[r][q] =
-      attached;
+      bubble;
 
 
     const p =
-      getPosition(
+      position(
         q,
         r
       );
@@ -1401,19 +1126,20 @@
 
 
     /*
-      Soft impact.
+      Soft collision effect.
     */
 
     impacts.push({
 
-      x: p.x,
-      y: p.y,
+      x:
+        p.x,
+
+      y:
+        p.y,
 
       life: 0,
 
-      max: 0.28,
-
-      strength: 1
+      max: .26
 
     });
 
@@ -1421,38 +1147,41 @@
     createParticles(
       p.x,
       p.y,
-      attached.color,
-      6
+      bubble.color,
+      7
     );
 
 
     rings.push({
 
-      x: p.x,
-      y: p.y,
+      x:
+        p.x,
+
+      y:
+        p.y,
 
       color:
-        attached.color,
+        bubble.color,
 
       life: 0,
 
-      max: 0.28
+      max: .28
 
     });
 
 
     /*
-      Special bubble.
+      Special.
     */
 
     if (
-      attached.special
+      bubble.special
     ) {
 
       activateSpecial(
         q,
         r,
-        attached.special
+        bubble.special
       );
 
       return;
@@ -1468,7 +1197,7 @@
       findCluster(
         q,
         r,
-        attached.color
+        bubble.color
       );
 
 
@@ -1482,12 +1211,7 @@
 
     } else {
 
-      /*
-        Give nearby balls a little
-        soft wobble.
-      */
-
-      softWobbleAround(
+      softWobble(
         q,
         r
       );
@@ -1503,14 +1227,7 @@
 
         missedShots = 0;
 
-
-        setTimeout(
-          () => {
-            descendCeiling();
-          },
-          80
-        );
-
+        descendCeiling();
 
       } else {
 
@@ -1520,11 +1237,9 @@
             : "बस एक मौका और…"
         );
 
-
         busy = false;
 
       }
-
     }
 
 
@@ -1538,7 +1253,6 @@
       completeLevel();
 
     }
-
   }
 
 
@@ -1546,49 +1260,47 @@
      SOFT WOBBLE
   ========================================================== */
 
-  function softWobbleAround(
-    centerQ,
-    centerR
-  ) {
+  function softWobble(q, r) {
 
-    const nearby =
-      getNeighbors(
-        centerQ,
-        centerR
-      );
+    for (
+      const [
+        nq,
+        nr
+      ]
+      of neighbors(q, r)
+    ) {
 
+      const bubble =
+        grid[nr]?.[nq];
 
-    nearby.forEach(
-      ([q, r], index) => {
-
-        const bubble =
-          grid[r]?.[q];
+      if (!bubble)
+        continue;
 
 
-        if (!bubble)
-          return;
+      bubble.wobble =
+        1;
 
 
-        bubble.wobble =
-          0.8;
+      bubble.squish =
+        0.65;
 
 
-        wobbleEffects.push({
+      bubbleWobbles.push({
 
-          q,
-          r,
+        q:
+          nq,
 
-          life: 0,
+        r:
+          nr,
 
-          max:
-            0.32 +
-            index * 0.025
+        life: 0,
 
-        });
+        max:
+          0.34
 
-      }
-    );
+      });
 
+    }
   }
 
 
@@ -1603,21 +1315,21 @@
     missedShots = 0;
 
 
-    const size =
+    const count =
       group.length;
 
 
     score +=
-      size *
+      count *
       20;
 
 
     if (
-      size >= 5
+      count >= 5
     ) {
 
       score +=
-        size *
+        count *
         10;
 
     }
@@ -1639,49 +1351,46 @@
         continue;
 
 
+      bubble.squish =
+        1;
+
+
+      bubble.wobble =
+        1;
+
+
       const p =
-        getPosition(
+        position(
           q,
           r
         );
 
 
-      /*
-        Squish all neighbouring
-        bubbles before pop.
-      */
-
-      softWobbleAround(
-        q,
-        r
-      );
-
-
-      grid[r][q] =
-        null;
-
-
       popEffects.push({
 
-        x: p.x,
-        y: p.y,
+        x:
+          p.x,
+
+        y:
+          p.y,
 
         color:
           bubble.color,
 
-        special:
-          bubble.special || null,
+        special: null,
 
         life: 0,
 
         max:
-          0.42 +
-          Math.random() * 0.1,
+          .42 +
+          Math.random() *
+          .08,
 
         delay:
-          Math.random() * 0.06,
+          Math.random() *
+          .06,
 
-        seed:
+        phase:
           Math.random() *
           Math.PI *
           2
@@ -1693,33 +1402,33 @@
         p.x,
         p.y,
         bubble.color,
-        13
+        14
       );
+
+
+      grid[r][q] =
+        null;
 
     }
 
 
     if (
-      size >= 7
+      count >= 7
     ) {
 
       showMessage(
         "गजब कऽ देलियै! ✨"
       );
 
-    }
-
-    else if (
-      size >= 5
+    } else if (
+      count >= 5
     ) {
 
       showMessage(
         "अहाँ कमाल कऽ देलियै!"
       );
 
-    }
-
-    else {
+    } else {
 
       showMessage(
         "बहुत नीक! 😄"
@@ -1730,20 +1439,20 @@
 
     shake =
       Math.min(
-        7,
+        8,
         2 +
-        size *
+        count *
         .35
       );
 
 
     playSound(
-      440 +
-      size *
-      35,
-      0.14,
+      450 +
+      count *
+      30,
+      .15,
       "sine",
-      0.045
+      .045
     );
 
 
@@ -1764,15 +1473,9 @@
           dropDetached();
 
 
-        if (
-          dropped
-        ) {
-
-          score +=
-            dropped *
-            45;
-
-        }
+        score +=
+          dropped *
+          45;
 
 
         updateUI();
@@ -1796,12 +1499,11 @@
       },
       220
     );
-
   }
 
 
   /* ==========================================================
-     DROP DETACHED
+     DETACHED DROP
   ========================================================== */
 
   function dropDetached() {
@@ -1833,12 +1535,10 @@
           continue;
 
 
-        const key =
-          `${q},${r}`;
-
-
         if (
-          connected.has(key)
+          connected.has(
+            q + "," + r
+          )
         ) {
 
           continue;
@@ -1847,21 +1547,19 @@
 
 
         const p =
-          getPosition(
+          position(
             q,
             r
           );
 
 
-        /*
-          These are the soft-body
-          starting values.
-        */
-
         fallingBubbles.push({
 
-          x: p.x,
-          y: p.y,
+          x:
+            p.x,
+
+          y:
+            p.y,
 
           color:
             bubble.color,
@@ -1872,17 +1570,17 @@
           vx:
             (
               Math.random() -
-              0.5
+              .5
             ) *
-            95,
+            85,
 
           vy:
-            -55 -
+            -70 -
             Math.random() *
-            80,
+            60,
 
           gravity:
-            410,
+            420,
 
           rotation:
             Math.random() *
@@ -1892,32 +1590,34 @@
           spin:
             (
               Math.random() -
-              0.5
+              .5
             ) *
-            5,
+            4,
+
+          /*
+            Keep the bubble
+            circular while falling.
+          */
 
           scale:
-            0.98,
+            .98,
 
-          squash:
-            0.85,
+          bounceScale:
+            1,
 
-          stretch:
-            1.1,
-
-          bounce:
+          bounceCount:
             0,
-
-          life: 0,
 
           grounded:
             false,
 
           floorY:
-            H + 45 +
-
+            H -
+            20 +
             Math.random() *
-            80
+            65,
+
+          life: 0
 
         });
 
@@ -1945,22 +1645,21 @@
 
 
       playSound(
-        170,
-        0.18,
+        180,
+        .18,
         "triangle",
-        0.035
+        .035
       );
 
     }
 
 
     return count;
-
   }
 
 
   /* ==========================================================
-     SPECIALS
+     SPECIAL BUBBLES
   ========================================================== */
 
   function activateSpecial(
@@ -1970,7 +1669,7 @@
   ) {
 
     const p =
-      getPosition(
+      position(
         q,
         r
       );
@@ -1982,8 +1681,11 @@
 
     specialBursts.push({
 
-      x: p.x,
-      y: p.y,
+      x:
+        p.x,
+
+      y:
+        p.y,
 
       type,
 
@@ -1991,8 +1693,8 @@
 
       max:
         type === "bomb"
-          ? 0.78
-          : 0.65
+          ? .78
+          : .66
 
     });
 
@@ -2015,9 +1717,7 @@
         r
       );
 
-    }
-
-    else if (
+    } else if (
       type === "bomb"
     ) {
 
@@ -2026,21 +1726,11 @@
         r
       );
 
-    }
+    } else {
 
-    else if (
-      type === "rainbow"
-    ) {
-
-      activateRainbow();
-
-    }
-
-    else if (
-      type === "sun"
-    ) {
-
-      activateSun();
+      activateColorSpecial(
+        type === "sun"
+      );
 
     }
 
@@ -2061,7 +1751,7 @@
 
 
     const p =
-      getPosition(
+      position(
         q,
         r
       );
@@ -2073,27 +1763,31 @@
 
     popEffects.push({
 
-      x: p.x,
+      x:
+        p.x,
 
-      y: p.y,
+      y:
+        p.y,
 
       color:
         bubble.color,
 
       special:
-        bubble.special || null,
+        bubble.special,
 
       life: 0,
 
       max:
-        0.42 +
-        Math.random() * 0.08,
+        .45,
 
       delay:
-        Math.random() * 0.05,
+        Math.random() *
+        .05,
 
-      seed:
-        Math.random()
+      phase:
+        Math.random() *
+        Math.PI *
+        2
 
     });
 
@@ -2102,15 +1796,11 @@
       p.x,
       p.y,
       bubble.color,
-      11
+      12
     );
 
   }
 
-
-  /* ==========================================================
-     LASER
-  ========================================================== */
 
   function activateLaser(
     q,
@@ -2138,7 +1828,6 @@
         );
 
       }
-
     }
 
 
@@ -2164,9 +1853,9 @@
 
     playSound(
       720,
-      0.22,
+      .23,
       "sawtooth",
-      0.04
+      .04
     );
 
 
@@ -2174,13 +1863,8 @@
       specialFinish,
       280
     );
-
   }
 
-
-  /* ==========================================================
-     BOMB
-  ========================================================== */
 
   function activateBomb(
     q,
@@ -2193,7 +1877,7 @@
 
 
     const center =
-      getPosition(
+      position(
         q,
         r
       );
@@ -2211,30 +1895,27 @@
         col++
       ) {
 
-        const bubble =
-          grid[row][col];
+        if (
+          !grid[row][col]
+        ) {
 
-
-        if (!bubble)
           continue;
+
+        }
 
 
         const p =
-          getPosition(
+          position(
             col,
             row
           );
 
 
-        const distance =
+        if (
           Math.hypot(
             p.x - center.x,
             p.y - center.y
-          );
-
-
-        if (
-          distance <= 100
+          ) <= 100
         ) {
 
           clearBubbleAt(
@@ -2243,17 +1924,15 @@
           );
 
         }
-
       }
-
     }
 
 
     playSound(
       110,
-      0.3,
+      .3,
       "sawtooth",
-      0.05
+      .05
     );
 
 
@@ -2261,15 +1940,10 @@
       specialFinish,
       300
     );
-
   }
 
 
-  /* ==========================================================
-     MOST COMMON COLOR
-  ========================================================== */
-
-  function getMostCommonColor() {
+  function mostCommonColor() {
 
     const counts = {};
 
@@ -2301,12 +1975,14 @@
           ) + 1;
 
       }
-
     }
 
 
-    let bestColor = 0;
-    let bestCount = -1;
+    let best =
+      0;
+
+    let amount =
+      -1;
 
 
     for (
@@ -2316,13 +1992,13 @@
 
       if (
         counts[key] >
-        bestCount
+        amount
       ) {
 
-        bestCount =
+        amount =
           counts[key];
 
-        bestColor =
+        best =
           Number(key);
 
       }
@@ -2330,50 +2006,24 @@
     }
 
 
-    return bestColor;
-
+    return best;
   }
 
 
-  /* ==========================================================
-     RAINBOW
-  ========================================================== */
-
-  function activateRainbow() {
-
-    showMessage(
-      "🌈 रंगों का जादू!"
-    );
-
-
-    clearColor(
-      getMostCommonColor()
-    );
-
-  }
-
-
-  /* ==========================================================
-     SUN
-  ========================================================== */
-
-  function activateSun() {
-
-    showMessage(
-      "☀️ सुनहरी चमक!"
-    );
-
-
-    clearColor(
-      getMostCommonColor()
-    );
-
-  }
-
-
-  function clearColor(
-    color
+  function activateColorSpecial(
+    isSun
   ) {
+
+    showMessage(
+      isSun
+        ? "☀️ सुनहरी चमक!"
+        : "🌈 रंगों का जादू!"
+    );
+
+
+    const color =
+      mostCommonColor();
+
 
     for (
       let r = 0;
@@ -2392,31 +2042,27 @@
 
 
         if (
-          !bubble ||
-          bubble.special ||
-          bubble.color !== color
+          bubble &&
+          !bubble.special &&
+          bubble.color === color
         ) {
 
-          continue;
+          clearBubbleAt(
+            q,
+            r
+          );
 
         }
 
-
-        clearBubbleAt(
-          q,
-          r
-        );
-
       }
-
     }
 
 
     playSound(
-      560,
-      0.2,
+      isSun ? 620 : 560,
+      .2,
       "sine",
-      0.04
+      .04
     );
 
 
@@ -2434,15 +2080,9 @@
       dropDetached();
 
 
-    if (
-      dropped
-    ) {
-
-      score +=
-        dropped *
-        45;
-
-    }
+    score +=
+      dropped *
+      45;
 
 
     updateUI();
@@ -2462,7 +2102,6 @@
       busy = false;
 
     }
-
   }
 
 
@@ -2473,7 +2112,9 @@
   function descendCeiling() {
 
     if (
-      ceilingAnimation
+      ceilingAnimation ||
+      gameEnded ||
+      levelWon
     ) {
 
       return;
@@ -2481,7 +2122,12 @@
     }
 
 
-    const row = [];
+    busy = true;
+
+
+    const row =
+      new Array(COLS)
+        .fill(null);
 
 
     for (
@@ -2490,9 +2136,31 @@
       q++
     ) {
 
-      row.push(
-        makeBubble()
-      );
+      if (
+        Math.random() <
+        .86
+      ) {
+
+        row[q] =
+          makeBubble();
+
+      }
+
+    }
+
+
+    if (
+      row.every(
+        bubble => !bubble
+      )
+    ) {
+
+      row[
+        Math.floor(
+          COLS / 2
+        )
+      ] =
+        makeBubble();
 
     }
 
@@ -2504,78 +2172,33 @@
 
     ceilingAnimation = {
 
-      life: 0,
+      progress: 0,
 
-      max: 0.45
+      duration:
+        .62
 
     };
 
 
+    shake = 5;
+
+
     showMessage(
-      "छत एक पंक्ति नीचे आ गई!"
+      "⚠️ छत एक पंक्ति नीचे आ गई!"
     );
 
 
     playSound(
       120,
-      0.15,
+      .18,
       "sawtooth",
-      0.025
+      .025
     );
-
-
-    /*
-      Add a soft shake.
-    */
-
-    for (
-      let r = 0;
-      r < Math.min(
-        2,
-        grid.length
-      );
-      r++
-    ) {
-
-      for (
-        let q = 0;
-        q < COLS;
-        q++
-      ) {
-
-        const bubble =
-          grid[r]?.[q];
-
-
-        if (bubble) {
-
-          bubble.wobble =
-            0.65;
-
-        }
-
-      }
-
-    }
-
-
-    if (
-      getHighestBubbleY() >=
-      DANGER_Y
-    ) {
-
-      endGame();
-
-    }
 
   }
 
 
-  function getHighestBubbleY() {
-
-    let highest =
-      Infinity;
-
+  function checkDanger() {
 
     for (
       let r = 0;
@@ -2583,21 +2206,19 @@
       r++
     ) {
 
-      for (
-        let q = 0;
-        q < COLS;
-        q++
+      if (
+        grid[r].some(
+          Boolean
+        )
       ) {
 
         if (
-          grid[r][q]
+          getY(r) +
+          RADIUS >=
+          DANGER_Y
         ) {
 
-          highest =
-            Math.min(
-              highest,
-              getY(r)
-            );
+          return true;
 
         }
 
@@ -2606,42 +2227,29 @@
     }
 
 
-    return highest;
-
+    return false;
   }
 
 
   /* ==========================================================
-     BOARD EMPTY
+     BOARD CHECK
   ========================================================== */
 
   function isBoardEmpty() {
 
-    for (
-      const row
-      of grid
-    ) {
-
-      for (
-        const bubble
-        of row
-      ) {
-
-        if (bubble)
-          return false;
-
-      }
-
-    }
-
-
-    return true;
+    return grid.every(
+      row =>
+        row.every(
+          bubble =>
+            !bubble
+        )
+    );
 
   }
 
 
   /* ==========================================================
-     WIN
+     WIN / LOSE
   ========================================================== */
 
   function completeLevel() {
@@ -2659,14 +2267,18 @@
     busy = true;
 
 
+    const level =
+      save.currentLevel;
+
+
     if (
       !save.completed.includes(
-        save.currentLevel
+        level
       )
     ) {
 
       save.completed.push(
-        save.currentLevel
+        level
       );
 
     }
@@ -2677,18 +2289,14 @@
         save.unlocked,
         Math.min(
           MAX_LEVEL,
-          save.currentLevel + 1
+          level + 1
         )
       );
 
 
-    save.bestScores[
-      save.currentLevel
-    ] =
+    save.bestScores[level] =
       Math.max(
-        save.bestScores[
-          save.currentLevel
-        ] || 0,
+        save.bestScores[level] || 0,
         score
       );
 
@@ -2698,10 +2306,6 @@
         save.best,
         score
       );
-
-
-    save.score =
-      score;
 
 
     saveGame();
@@ -2714,19 +2318,15 @@
 
     playSound(
       720,
-      0.25,
+      .25,
       "sine",
-      0.055
+      .055
     );
 
 
-    /*
-      Little celebration.
-    */
-
     for (
       let i = 0;
-      i < 28;
+      i < 26;
       i++
     ) {
 
@@ -2748,10 +2348,6 @@
 
   }
 
-
-  /* ==========================================================
-     LOSE
-  ========================================================== */
 
   function endGame() {
 
@@ -2775,9 +2371,9 @@
 
     playSound(
       100,
-      0.3,
+      .3,
       "sawtooth",
-      0.04
+      .04
     );
 
 
@@ -2789,15 +2385,75 @@
         );
 
       },
-      650
+      600
     );
 
   }
 
 
   /* ==========================================================
-     CELEBRATION PARTICLES
+     PARTICLES
   ========================================================== */
+
+  function createParticles(
+    x,
+    y,
+    color,
+    count = 10
+  ) {
+
+    for (
+      let i = 0;
+      i < count;
+      i++
+    ) {
+
+      const angle =
+        Math.random() *
+        Math.PI *
+        2;
+
+
+      const speed =
+        55 +
+        Math.random() *
+        175;
+
+
+      particles.push({
+
+        x,
+        y,
+
+        vx:
+          Math.cos(angle) *
+          speed,
+
+        vy:
+          Math.sin(angle) *
+          speed -
+          55,
+
+        color,
+
+        size:
+          1.5 +
+          Math.random() *
+          3,
+
+        life: 0,
+
+        max:
+          .35 +
+          Math.random() *
+          .4
+
+      });
+
+    }
+
+  }
+
 
   function createCelebrationParticle() {
 
@@ -2810,12 +2466,12 @@
       y:
         20 +
         Math.random() *
-        150,
+        140,
 
       vx:
         (
           Math.random() -
-          0.5
+          .5
         ) *
         160,
 
@@ -2838,75 +2494,11 @@
       life: 0,
 
       max:
-        0.8 +
+        .8 +
         Math.random() *
-        0.5
+        .5
 
     });
-
-  }
-
-
-  /* ==========================================================
-     PARTICLES
-  ========================================================== */
-
-  function createParticles(
-    x,
-    y,
-    color,
-    count
-  ) {
-
-    for (
-      let i = 0;
-      i < count;
-      i++
-    ) {
-
-      const angle =
-        Math.random() *
-        Math.PI *
-        2;
-
-
-      const speed =
-        55 +
-        Math.random() *
-        180;
-
-
-      particles.push({
-
-        x,
-        y,
-
-        vx:
-          Math.cos(angle) *
-          speed,
-
-        vy:
-          Math.sin(angle) *
-          speed -
-          55,
-
-        color,
-
-        size:
-          1.5 +
-          Math.random() *
-          3.2,
-
-        life: 0,
-
-        max:
-          0.35 +
-          Math.random() *
-          0.4
-
-      });
-
-    }
 
   }
 
@@ -2921,8 +2513,7 @@
       Math.max(
         0,
         launcherRecoil -
-        dt *
-        5
+        dt * 5
       );
 
 
@@ -2930,8 +2521,7 @@
       Math.max(
         0,
         launcherBounce -
-        dt *
-        4
+        dt * 4
       );
 
 
@@ -2939,30 +2529,57 @@
       Math.max(
         0,
         shake -
-        dt *
-        18
+        dt * 16
       );
 
 
     /* --------------------------------------------------------
-       Ceiling animation
+       Ceiling
     -------------------------------------------------------- */
 
     if (
       ceilingAnimation
     ) {
 
-      ceilingAnimation.life +=
-        dt;
+      ceilingAnimation.progress +=
+        dt /
+        ceilingAnimation.duration;
 
 
       if (
-        ceilingAnimation.life >=
-        ceilingAnimation.max
+        ceilingAnimation.progress >= 1
       ) {
 
-        ceilingAnimation =
-          null;
+        ceilingAnimation.progress = 1;
+
+        ceilingAnimation = null;
+
+
+        /*
+          Check danger AFTER
+          animation completes.
+        */
+
+        if (
+          checkDanger()
+        ) {
+
+          endGame();
+
+          return;
+
+        }
+
+
+        busy = false;
+
+
+        showMessage(
+          "अब निशाना लगाइए 🎯"
+        );
+
+
+        updateUI();
 
       }
 
@@ -2970,7 +2587,7 @@
 
 
     /* --------------------------------------------------------
-       Grid bubble squish/wobble
+       Existing bubble softness
     -------------------------------------------------------- */
 
     for (
@@ -2991,8 +2608,12 @@
           bubble.squish > 0
         ) {
 
-          bubble.squish -=
-            dt * 5;
+          bubble.squish =
+            Math.max(
+              0,
+              bubble.squish -
+              dt * 5
+            );
 
         }
 
@@ -3001,44 +2622,18 @@
           bubble.wobble > 0
         ) {
 
-          bubble.wobble -=
-            dt * 3.7;
+          bubble.wobble =
+            Math.max(
+              0,
+              bubble.wobble -
+              dt * 3.7
+            );
 
         }
 
-      }
 
-    }
-
-
-    /* --------------------------------------------------------
-       Wobble effects
-    -------------------------------------------------------- */
-
-    for (
-      let i =
-        wobbleEffects.length - 1;
-      i >= 0;
-      i--
-    ) {
-
-      const effect =
-        wobbleEffects[i];
-
-
-      effect.life +=
-        dt;
-
-
-      if (
-        effect.life >=
-        effect.max
-      ) {
-
-        wobbleEffects.splice(
-          i,
-          1
-        );
+        bubble.phase +=
+          dt * 2;
 
       }
 
@@ -3053,21 +2648,17 @@
       movingBubble
     ) {
 
-      const bubble =
+      const b =
         movingBubble;
 
 
-      /*
-        Trail.
-      */
-
-      bubble.trail.push({
+      b.trail.push({
 
         x:
-          bubble.x,
+          b.x,
 
         y:
-          bubble.y,
+          b.y,
 
         life: 0
 
@@ -3075,17 +2666,17 @@
 
 
       if (
-        bubble.trail.length > 11
+        b.trail.length > 12
       ) {
 
-        bubble.trail.shift();
+        b.trail.shift();
 
       }
 
 
       for (
         const trail
-        of bubble.trail
+        of b.trail
       ) {
 
         trail.life +=
@@ -3094,94 +2685,66 @@
       }
 
 
-      /*
-        Movement.
-      */
-
-      bubble.x +=
-        bubble.vx *
+      b.x +=
+        b.vx *
         dt;
 
 
-      bubble.y +=
-        bubble.vy *
+      b.y +=
+        b.vy *
         dt;
 
 
-      /*
-        Slight rolling rotation.
-      */
-
-      bubble.rotation +=
+      b.rotation +=
         (
-          bubble.vx /
+          b.vx /
           5000
         ) *
         dt;
 
 
       /*
-        Side bounce.
+        Wall bounce.
       */
 
       if (
-        bubble.x <
-        RADIUS
+        b.x <= RADIUS
       ) {
 
-        bubble.x =
+        b.x =
           RADIUS;
 
-
-        bubble.vx =
+        b.vx =
           Math.abs(
-            bubble.vx
+            b.vx
           );
 
-
-        bubble.squash =
-          0.8;
+        b.squash =
+          .8;
 
       }
 
 
       if (
-        bubble.x >
+        b.x >=
         W - RADIUS
       ) {
 
-        bubble.x =
+        b.x =
           W - RADIUS;
 
-
-        bubble.vx =
+        b.vx =
           -Math.abs(
-            bubble.vx
+            b.vx
           );
 
-
-        bubble.squash =
-          0.8;
+        b.squash =
+          .8;
 
       }
 
 
-      /*
-        Recover squash.
-      */
-
-      bubble.squash +=
-        (
-          0 -
-          bubble.squash
-        ) *
-        Math.min(
-          1,
-          dt * 15
-        );
-
-
-      let collision =
+      let hit =
         false;
 
 
@@ -3192,7 +2755,7 @@
       for (
         let r = 0;
         r < grid.length &&
-        !collision;
+        !hit;
         r++
       ) {
 
@@ -3202,52 +2765,37 @@
           q++
         ) {
 
-          if (
-            !grid[r][q]
-          ) {
+          const cell =
+            grid[r][q];
 
+
+          if (!cell)
             continue;
-
-          }
 
 
           const p =
-            getPosition(
+            position(
               q,
               r
             );
 
 
-          const distance =
-            Math.hypot(
-              p.x - bubble.x,
-              p.y - bubble.y
-            );
-
-
           if (
-            distance <=
+            Math.hypot(
+              p.x - b.x,
+              p.y - b.y
+            ) <=
             DIAMETER - 3
           ) {
 
-            collision =
+            hit =
               true;
 
 
-            /*
-              Tiny squash before
-              attachment.
-            */
-
-            bubble.squash =
+            cell.squish =
               1;
 
-
-            grid[r][q].squish =
-              1;
-
-
-            grid[r][q].wobble =
+            cell.wobble =
               1;
 
 
@@ -3256,22 +2804,18 @@
               x:
                 (
                   p.x +
-                  bubble.x
-                ) /
-                2,
+                  b.x
+                ) / 2,
 
               y:
                 (
                   p.y +
-                  bubble.y
-                ) /
-                2,
+                  b.y
+                ) / 2,
 
               life: 0,
 
-              max: 0.22,
-
-              strength: 0.8
+              max: .2
 
             });
 
@@ -3290,27 +2834,24 @@
       */
 
       if (
-        bubble.y <=
-        TOP_Y +
-        RADIUS
+        b.y <=
+        TOP_Y + RADIUS
       ) {
 
-        bubble.y =
-          TOP_Y +
-          RADIUS;
+        b.y =
+          TOP_Y + RADIUS;
 
-
-        collision =
+        hit =
           true;
 
       }
 
 
       if (
-        collision
+        hit
       ) {
 
-        finishMovingBubble();
+        finishShot();
 
       }
 
@@ -3328,169 +2869,136 @@
       i--
     ) {
 
-      const bubble =
+      const b =
         fallingBubbles[i];
 
 
-      bubble.life +=
+      b.life +=
         dt;
 
 
       if (
-        !bubble.grounded
+        !b.grounded
       ) {
 
-        /*
-          Gravity.
-        */
-
-        bubble.vy +=
-          bubble.gravity *
+        b.vy +=
+          b.gravity *
           dt;
 
 
-        bubble.x +=
-          bubble.vx *
+        b.x +=
+          b.vx *
           dt;
 
 
-        bubble.y +=
-          bubble.vy *
+        b.y +=
+          b.vy *
           dt;
 
 
-        bubble.rotation +=
-          bubble.spin *
+        b.rotation +=
+          b.spin *
           dt;
 
 
         /*
-          Stretch while falling.
-        */
-
-        const fallSpeed =
-          Math.abs(
-            bubble.vy
-          );
-
-
-        bubble.stretch =
-          1 +
-          Math.min(
-            0.28,
-            fallSpeed /
-            1500
-          );
-
-
-        bubble.squash =
-          1 /
-          bubble.stretch;
-
-
-        /*
-          Side walls.
+          Gentle wall bounce.
         */
 
         if (
-          bubble.x <
-          RADIUS
+          b.x <= RADIUS
         ) {
 
-          bubble.x =
+          b.x =
             RADIUS;
 
 
-          bubble.vx =
+          b.vx =
             Math.abs(
-              bubble.vx
+              b.vx
             ) *
-            0.78;
-
-
-          bubble.squash =
-            0.75;
+            .8;
 
         }
 
 
         if (
-          bubble.x >
+          b.x >=
           W - RADIUS
         ) {
 
-          bubble.x =
+          b.x =
             W - RADIUS;
 
 
-          bubble.vx =
+          b.vx =
             -Math.abs(
-              bubble.vx
+              b.vx
             ) *
-            0.78;
-
-
-          bubble.squash =
-            0.75;
+            .8;
 
         }
 
 
-        /*
-          Soft bottom bounce.
-        */
-
         const floor =
           Math.min(
-            H - 25,
-            bubble.floorY
+            H - 24,
+            b.floorY
           );
 
 
+        /*
+          Real bounce.
+        */
+
         if (
-          bubble.y >= floor
+          b.y >= floor
         ) {
 
-          bubble.y =
+          b.y =
             floor;
 
 
           if (
             Math.abs(
-              bubble.vy
-            ) > 100
+              b.vy
+            ) > 115 &&
+            b.bounceCount < 2
           ) {
 
-            bubble.vy =
+            b.vy =
               -Math.abs(
-                bubble.vy
+                b.vy
               ) *
-              0.48;
+              (
+                b.bounceCount === 0
+                  ? .46
+                  : .30
+              );
 
 
-            bubble.vx *=
-              0.88;
+            b.vx *=
+              .88;
 
 
-            bubble.squash =
-              1.28;
+            b.bounceCount++;
 
 
-            bubble.stretch =
-              0.78;
+            b.bounceScale =
+              1.16;
 
 
             createParticles(
-              bubble.x,
-              bubble.y,
-              bubble.color,
+              b.x,
+              b.y,
+              b.color,
               3
             );
 
 
           } else {
 
-            bubble.grounded =
+            b.grounded =
               true;
 
           }
@@ -3500,54 +3008,31 @@
       } else {
 
         /*
-          Tiny final bounce /
-          slide / exit.
+          Final gentle movement
+          before leaving screen.
         */
 
-        bubble.vx *=
-          Math.pow(
-            0.35,
-            dt
-          );
-
-
-        bubble.rotation +=
-          bubble.spin *
-          dt *
-          0.35;
-
-
-        bubble.squash +=
-          (
-            1 -
-            bubble.squash
-          ) *
-          Math.min(
-            1,
-            dt * 10
-          );
-
-
-        if (
-          bubble.life >
-          1.5
-        ) {
-
-          bubble.y +=
-            80 * dt;
-
-        }
+        b.y +=
+          75 *
+          dt;
 
       }
 
 
-      /*
-        Remove after leaving.
-      */
+      b.bounceScale +=
+        (
+          1 -
+          b.bounceScale
+        ) *
+        Math.min(
+          1,
+          dt * 10
+        );
+
 
       if (
-        bubble.y >
-        H + 120
+        b.y >
+        H + 110
       ) {
 
         fallingBubbles.splice(
@@ -3610,7 +3095,7 @@
 
 
     /* --------------------------------------------------------
-       Pops
+       Pop effects
     -------------------------------------------------------- */
 
     for (
@@ -3620,18 +3105,18 @@
       i--
     ) {
 
-      const effect =
+      const p =
         popEffects[i];
 
 
-      effect.life +=
+      p.life +=
         dt;
 
 
       if (
-        effect.life >=
-        effect.max +
-        effect.delay
+        p.life >=
+        p.max +
+        p.delay
       ) {
 
         popEffects.splice(
@@ -3655,17 +3140,13 @@
       i--
     ) {
 
-      const ring =
-        rings[i];
-
-
-      ring.life +=
+      rings[i].life +=
         dt;
 
 
       if (
-        ring.life >=
-        ring.max
+        rings[i].life >=
+        rings[i].max
       ) {
 
         rings.splice(
@@ -3689,17 +3170,13 @@
       i--
     ) {
 
-      const impact =
-        impacts[i];
-
-
-      impact.life +=
+      impacts[i].life +=
         dt;
 
 
       if (
-        impact.life >=
-        impact.max
+        impacts[i].life >=
+        impacts[i].max
       ) {
 
         impacts.splice(
@@ -3723,17 +3200,13 @@
       i--
     ) {
 
-      const burst =
-        specialBursts[i];
-
-
-      burst.life +=
+      specialBursts[i].life +=
         dt;
 
 
       if (
-        burst.life >=
-        burst.max
+        specialBursts[i].life >=
+        specialBursts[i].max
       ) {
 
         specialBursts.splice(
@@ -3773,13 +3246,13 @@
 
         (
           Math.random() -
-          0.5
+          .5
         ) *
         shake,
 
         (
           Math.random() -
-          0.5
+          .5
         ) *
         shake
 
@@ -3790,9 +3263,9 @@
 
     drawBackground();
 
-    drawCeiling();
+    drawTopLine();
 
-    drawBubbles();
+    drawBubbleGrid();
 
     drawFallingBubbles();
 
@@ -3835,19 +3308,17 @@
 
     gradient.addColorStop(
       0,
-      "#1f3d70"
+      "#203d70"
     );
-
 
     gradient.addColorStop(
-      0.55,
-      "#183360"
+      .58,
+      "#18345f"
     );
-
 
     gradient.addColorStop(
       1,
-      "#10294f"
+      "#112a50"
     );
 
 
@@ -3863,15 +3334,11 @@
     );
 
 
-    /*
-      Subtle pattern.
-    */
-
     ctx.save();
 
 
     ctx.globalAlpha =
-      0.045;
+      .045;
 
 
     ctx.strokeStyle =
@@ -3942,15 +3409,11 @@
     ctx.restore();
 
 
-    /*
-      Mithila motifs.
-    */
-
     ctx.save();
 
 
     ctx.globalAlpha =
-      0.065;
+      .055;
 
 
     ctx.font =
@@ -3958,29 +3421,29 @@
 
 
     ctx.fillText(
-      "🪷",
-      18,
-      215
+      "✦",
+      20,
+      210
     );
 
 
     ctx.fillText(
-      "🐟",
+      "●",
       410,
       420
     );
 
 
     ctx.fillText(
-      "🦚",
-      25,
+      "✦",
+      30,
       590
     );
 
 
     ctx.fillText(
-      "🪷",
-      405,
+      "●",
+      410,
       650
     );
 
@@ -3988,15 +3451,11 @@
     ctx.restore();
 
 
-    /*
-      Danger line.
-    */
-
     ctx.save();
 
 
     ctx.globalAlpha =
-      0.27;
+      .24;
 
 
     ctx.strokeStyle =
@@ -4004,7 +3463,7 @@
 
 
     ctx.setLineDash(
-      [5, 8]
+      [5,8]
     );
 
 
@@ -4031,17 +3490,13 @@
   }
 
 
-  /* ==========================================================
-     CEILING
-  ========================================================== */
-
-  function drawCeiling() {
+  function drawTopLine() {
 
     ctx.save();
 
 
     ctx.globalAlpha =
-      0.25;
+      .25;
 
 
     ctx.strokeStyle =
@@ -4076,10 +3531,10 @@
 
 
   /* ==========================================================
-     BUBBLE DRAW
+     BUBBLE GRID
   ========================================================== */
 
-  function drawBubbles() {
+  function drawBubbleGrid() {
 
     for (
       let r = 0;
@@ -4102,77 +3557,102 @@
 
 
         const p =
-          getPosition(
+          position(
             q,
             r
           );
 
 
-        let scaleX = 1;
-        let scaleY = 1;
-        let offsetX = 0;
-        let offsetY = 0;
+        let y =
+          p.y;
 
 
         /*
-          Soft wobble.
+          Animate the newly lowered
+          ceiling row.
         */
+
+        if (
+          ceilingAnimation
+        ) {
+
+          const t =
+            Math.min(
+              1,
+              ceilingAnimation.progress
+            );
+
+
+          const eased =
+            1 -
+            Math.pow(
+              1 - t,
+              3
+            );
+
+
+          y =
+            p.y -
+            ROW_HEIGHT *
+            (1 - eased);
+
+        }
+
+
+        let sx = 1;
+        let sy = 1;
+        let ox = 0;
+
 
         if (
           bubble.wobble > 0
         ) {
 
-          const wobble =
+          const w =
             Math.sin(
-              (
-                bubble.wobble *
-                15
-              )
+              bubble.phase *
+              4
             ) *
             bubble.wobble;
 
 
-          scaleX =
-            1 +
-            wobble *
-            0.045;
+          sx +=
+            w *
+            .035;
 
 
-          scaleY =
-            1 -
-            wobble *
-            0.035;
+          sy -=
+            w *
+            .025;
 
 
-          offsetX =
+          ox =
             Math.sin(
-              bubble.wobble *
-              19
+              bubble.phase *
+              5
             ) *
             bubble.wobble *
-            2;
+            1.5;
 
         }
 
 
         /*
-          Soft impact squash.
+          Soft impact.
         */
 
         if (
           bubble.squish > 0
         ) {
 
-          scaleX *=
-            1 +
+          sx +=
             bubble.squish *
-            0.16;
+            .13;
 
 
-          scaleY *=
-            1 -
+          sy -=
             bubble.squish *
-            0.12;
+            .10;
 
         }
 
@@ -4181,14 +3661,14 @@
 
 
         ctx.translate(
-          p.x + offsetX,
-          p.y
+          p.x + ox,
+          y
         );
 
 
         ctx.scale(
-          scaleX,
-          scaleY
+          sx,
+          sy
         );
 
 
@@ -4196,7 +3676,7 @@
           bubble.special
         ) {
 
-          drawSpecialBubble(
+          drawSpecial(
             0,
             0,
             bubble.special,
@@ -4235,7 +3715,10 @@
     y,
     color,
     scale = 1,
-    alpha = 1
+    alpha = 1,
+    rotation = 0,
+    sx = 1,
+    sy = 1
   ) {
 
     const c =
@@ -4256,9 +3739,14 @@
     );
 
 
+    ctx.rotate(
+      rotation
+    );
+
+
     ctx.scale(
-      scale,
-      scale
+      scale * sx,
+      scale * sy
     );
 
 
@@ -4332,7 +3820,7 @@
     */
 
     ctx.fillStyle =
-      "rgba(255,255,255,.36)";
+      "rgba(255,255,255,.38)";
 
 
     ctx.beginPath();
@@ -4350,7 +3838,7 @@
     ctx.fill();
 
 
-    drawBubblePattern(
+    drawPattern(
       c.pattern,
       c
     );
@@ -4365,7 +3853,7 @@
      BUBBLE PATTERN
   ========================================================== */
 
-  function drawBubblePattern(
+  function drawPattern(
     pattern,
     c
   ) {
@@ -4396,11 +3884,11 @@
       ) {
 
         const a =
-          -Math.PI *
-          .8 +
+          -.8 *
+          Math.PI +
           i *
-          Math.PI *
-          .4;
+          .4 *
+          Math.PI;
 
 
         ctx.beginPath();
@@ -4425,7 +3913,6 @@
       }
 
     }
-
 
     else if (
       pattern === "sun"
@@ -4479,7 +3966,6 @@
 
     }
 
-
     else if (
       pattern === "leaf"
     ) {
@@ -4520,7 +4006,6 @@
 
     }
 
-
     else if (
       pattern === "wave"
     ) {
@@ -4553,7 +4038,6 @@
       ctx.stroke();
 
     }
-
 
     else if (
       pattern === "peacock"
@@ -4590,10 +4074,7 @@
 
     }
 
-
-    else if (
-      pattern === "flower"
-    ) {
+    else {
 
       for (
         let i = 0;
@@ -4632,15 +4113,16 @@
 
 
   /* ==========================================================
-     SPECIAL BUBBLE
+     SPECIAL DRAW
   ========================================================== */
 
-  function drawSpecialBubble(
+  function drawSpecial(
     x,
     y,
     type,
     scale = 1,
-    alpha = 1
+    alpha = 1,
+    rotation = 0
   ) {
 
     ctx.save();
@@ -4653,6 +4135,11 @@
     ctx.translate(
       x,
       y
+    );
+
+
+    ctx.rotate(
+      rotation
     );
 
 
@@ -4705,7 +4192,6 @@
 
     }
 
-
     else if (
       type === "bomb"
     ) {
@@ -4739,7 +4225,6 @@
       );
 
     }
-
 
     else if (
       type === "rainbow"
@@ -4784,7 +4269,6 @@
       );
 
     }
-
 
     else {
 
@@ -4872,7 +4356,7 @@
 
 
     ctx.fillText(
-      SPECIAL[type]?.icon ||
+      SPECIAL_ICONS[type] ||
       "✦",
       0,
       1
@@ -4899,6 +4383,92 @@
 
 
     ctx.restore();
+
+  }
+
+
+  /* ==========================================================
+     FALLING BUBBLES DRAW
+  ========================================================== */
+
+  function drawFallingBubbles() {
+
+    for (
+      const bubble
+      of fallingBubbles
+    ) {
+
+      /*
+        IMPORTANT:
+        Keep them round.
+        Only use a very small bounce
+        deformation on actual impact.
+      */
+
+      let sx = 1;
+      let sy = 1;
+
+
+      if (
+        bubble.bounceScale >
+        1
+      ) {
+
+        sx *=
+          bubble.bounceScale;
+
+
+        sy *=
+          2 -
+          bubble.bounceScale;
+
+      }
+
+
+      ctx.save();
+
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          1 -
+          bubble.life *
+          .32
+        );
+
+
+      if (
+        bubble.special
+      ) {
+
+        drawSpecial(
+          bubble.x,
+          bubble.y,
+          bubble.special,
+          bubble.scale,
+          1,
+          bubble.rotation
+        );
+
+      } else {
+
+        drawBubble(
+          bubble.x,
+          bubble.y,
+          bubble.color,
+          bubble.scale,
+          1,
+          bubble.rotation,
+          sx,
+          sy
+        );
+
+      }
+
+
+      ctx.restore();
+
+    }
 
   }
 
@@ -4933,19 +4503,15 @@
         movingBubble.trail[i];
 
 
-      const alpha =
-        (
-          i + 1
-        ) /
-        movingBubble.trail.length *
-        .15;
-
-
       ctx.save();
 
 
       ctx.globalAlpha =
-        alpha;
+        (
+          i + 1
+        ) /
+        movingBubble.trail.length *
+        .12;
 
 
       ctx.fillStyle =
@@ -4974,182 +4540,42 @@
     }
 
 
-    /*
-      Soft flying squash.
-    */
-
-    const speed =
-      Math.hypot(
-        movingBubble.vx,
-        movingBubble.vy
-      );
-
-
     const stretch =
       1 +
       Math.min(
-        .15,
-        speed /
-        6000
+        .1,
+        Math.abs(
+          movingBubble.vy
+        ) /
+        7000
       );
-
-
-    ctx.save();
-
-
-    ctx.translate(
-      movingBubble.x,
-      movingBubble.y
-    );
-
-
-    ctx.rotate(
-      movingBubble.rotation
-    );
-
-
-    ctx.scale(
-      1 / stretch,
-      stretch
-    );
 
 
     if (
       movingBubble.special
     ) {
 
-      drawSpecialBubble(
-        0,
-        0,
+      drawSpecial(
+        movingBubble.x,
+        movingBubble.y,
         movingBubble.special,
         movingBubble.scale,
-        1
+        1,
+        movingBubble.rotation
       );
 
     } else {
 
       drawBubble(
-        0,
-        0,
+        movingBubble.x,
+        movingBubble.y,
         movingBubble.color,
         movingBubble.scale,
-        1
-      );
-
-    }
-
-
-    ctx.restore();
-
-  }
-
-
-  /* ==========================================================
-     FALLING DRAW
-  ========================================================== */
-
-  function drawFallingBubbles() {
-
-    for (
-      const bubble
-      of fallingBubbles
-    ) {
-
-      const fallSpeed =
-        Math.abs(
-          bubble.vy
-        );
-
-
-      let stretch =
-        1 +
-        Math.min(
-          .23,
-          fallSpeed /
-          1700
-        );
-
-
-      let squash =
-        1 /
-        stretch;
-
-
-      /*
-        Extra squash during bounce.
-      */
-
-      if (
-        bubble.squash > 1
-      ) {
-
-        squash *=
-          bubble.squash;
-
-
-        stretch /=
-          bubble.squash;
-
-      }
-
-
-      ctx.save();
-
-
-      ctx.globalAlpha =
-        Math.max(
-          0,
-          1 -
-          bubble.life *
-          .42
-        );
-
-
-      ctx.translate(
-        bubble.x,
-        bubble.y
-      );
-
-
-      ctx.rotate(
-        bubble.rotation
-      );
-
-
-      ctx.scale(
-        bubble.scale *
-        squash,
-        bubble.scale *
+        1,
+        movingBubble.rotation,
+        1 / stretch,
         stretch
       );
-
-
-      if (
-        bubble.special
-      ) {
-
-        drawSpecialBubble(
-          0,
-          0,
-          bubble.special,
-          1,
-          1
-        );
-
-      } else {
-
-        drawBubble(
-          0,
-          0,
-          bubble.color,
-          1,
-          1
-        );
-
-      }
-
-
-      ctx.restore();
 
     }
 
@@ -5214,7 +4640,7 @@
 
 
     ctx.setLineDash(
-      [6, 9]
+      [6,9]
     );
 
 
@@ -5485,40 +4911,15 @@
     ctx.stroke();
 
 
-    ctx.fillStyle =
-      "#e2efff";
-
-
-    ctx.beginPath();
-
-
-    ctx.arc(
-      0,
-      17,
-      6,
-      0,
-      Math.PI * 2
-    );
-
-
-    ctx.fill();
-
-
-    /*
-      Current bubble sits softly
-      inside the launcher.
-    */
-
     if (
       currentSpecial
     ) {
 
-      drawSpecialBubble(
+      drawSpecial(
         0,
         -2 - recoil,
         currentSpecial,
-        1.02,
-        1
+        1.02
       );
 
     } else {
@@ -5527,8 +4928,7 @@
         0,
         -2 - recoil,
         currentColor,
-        1.02,
-        1
+        1.02
       );
 
     }
@@ -5542,33 +4942,6 @@
   /* ==========================================================
      POP EFFECT
   ========================================================== */
-
-  function easeOutBack(t) {
-
-    const c1 =
-      1.70158;
-
-
-    const c3 =
-      c1 + 1;
-
-
-    return (
-      1 +
-      c3 *
-      Math.pow(
-        t - 1,
-        3
-      ) +
-      c1 *
-      Math.pow(
-        t - 1,
-        2
-      )
-    );
-
-  }
-
 
   function drawPopEffects() {
 
@@ -5606,54 +4979,55 @@
         1 - t;
 
 
+      let sx = 1;
+      let sy = 1;
+
+
       /*
-        Squash first, then expand.
+        Tiny squash first,
+        then expansion.
       */
-
-      let sx;
-      let sy;
-
 
       if (
         t < .18
       ) {
 
-        const squeeze =
+        const k =
           t / .18;
 
 
         sx =
           1 +
-          squeeze *
-          .18;
+          k *
+          .16;
 
 
         sy =
           1 -
-          squeeze *
-          .13;
+          k *
+          .11;
 
       } else {
 
-        const expand =
-          easeOutBack(
-            (
-              t - .18
-            ) /
-            .82
-          );
+        const k =
+          (
+            t - .18
+          ) /
+          .82;
+
+
+        const size =
+          1 +
+          k *
+          .55;
 
 
         sx =
-          1 +
-          expand *
-          .58;
+          size;
 
 
         sy =
-          1 +
-          expand *
-          .58;
+          size;
 
       }
 
@@ -5677,29 +5051,51 @@
       );
 
 
-      if (
-        effect.special
-      ) {
+      drawBubble(
+        0,
+        0,
+        effect.color,
+        1,
+        1
+      );
 
-        drawSpecialBubble(
-          0,
-          0,
-          effect.special,
-          1,
-          1
-        );
 
-      } else {
+      ctx.restore();
 
-        drawBubble(
-          0,
-          0,
-          effect.color,
-          1,
-          1
-        );
 
-      }
+      ctx.save();
+
+
+      ctx.globalAlpha =
+        alpha *
+        .7;
+
+
+      ctx.strokeStyle =
+        COLORS[
+          effect.color
+        ].light;
+
+
+      ctx.lineWidth =
+        2.5 *
+        (1 - t);
+
+
+      ctx.beginPath();
+
+
+      ctx.arc(
+        effect.x,
+        effect.y,
+        RADIUS +
+        t * 25,
+        0,
+        Math.PI * 2
+      );
+
+
+      ctx.stroke();
 
 
       ctx.restore();
@@ -5743,10 +5139,7 @@
 
       ctx.lineWidth =
         3 *
-        (
-          1 -
-          t
-        );
+        (1 - t);
 
 
       ctx.beginPath();
@@ -5791,19 +5184,12 @@
         );
 
 
-      const radius =
-        8 +
-        t *
-        28;
-
-
       ctx.save();
 
 
       ctx.globalAlpha =
         (
-          1 -
-          t
+          1 - t
         ) *
         .65;
 
@@ -5814,10 +5200,7 @@
 
       ctx.lineWidth =
         2.5 *
-        (
-          1 -
-          t
-        );
+        (1 - t);
 
 
       ctx.beginPath();
@@ -5826,7 +5209,8 @@
       ctx.arc(
         impact.x,
         impact.y,
-        radius,
+        8 +
+        t * 28,
         0,
         Math.PI * 2
       );
@@ -5843,7 +5227,7 @@
 
 
   /* ==========================================================
-     PARTICLES
+     PARTICLES DRAW
   ========================================================== */
 
   function drawParticles() {
@@ -5899,7 +5283,7 @@
 
 
   /* ==========================================================
-     SPECIAL BURSTS
+     SPECIAL EFFECTS
   ========================================================== */
 
   function drawSpecialBursts() {
@@ -5917,20 +5301,20 @@
         );
 
 
+      ctx.save();
+
+
+      ctx.globalAlpha =
+        (
+          1 - t
+        ) *
+        .75;
+
+
       if (
-        burst.type === "laser"
+        burst.type ===
+        "laser"
       ) {
-
-        ctx.save();
-
-
-        ctx.globalAlpha =
-          (
-            1 -
-            t
-          ) *
-          .82;
-
 
         ctx.strokeStyle =
           "#bff5ff";
@@ -5992,9 +5376,6 @@
 
         ctx.stroke();
 
-
-        ctx.restore();
-
       } else {
 
         const color =
@@ -6005,23 +5386,6 @@
               : "#ffe47b";
 
 
-        const radius =
-          18 +
-          t *
-          90;
-
-
-        ctx.save();
-
-
-        ctx.globalAlpha =
-          (
-            1 -
-            t
-          ) *
-          .68;
-
-
         ctx.strokeStyle =
           color;
 
@@ -6029,8 +5393,7 @@
         ctx.lineWidth =
           4 *
           (
-            1 -
-            t
+            1 - t
           );
 
 
@@ -6040,7 +5403,8 @@
         ctx.arc(
           burst.x,
           burst.y,
-          radius,
+          18 +
+          t * 88,
           0,
           Math.PI * 2
         );
@@ -6048,10 +5412,10 @@
 
         ctx.stroke();
 
-
-        ctx.restore();
-
       }
+
+
+      ctx.restore();
 
     }
 
@@ -6211,17 +5575,12 @@
 
 
     const c =
-      COLORS[index];
+      COLORS[index] ||
+      COLORS[0];
 
 
     element.style.background =
-      `radial-gradient(
-        circle at 30% 25%,
-        #ffffff 0%,
-        ${c.light} 17%,
-        ${c.main} 52%,
-        ${c.dark} 100%
-      )`;
+      `radial-gradient(circle at 30% 25%,#ffffff 0%,${c.light} 17%,${c.main} 52%,${c.dark} 100%)`;
 
 
     element.style.boxShadow =
@@ -6247,40 +5606,14 @@
 
 
   /* ==========================================================
-     SCREENS
-  ========================================================== */
-
-  function showScreen(
-    screen
-  ) {
-
-    homeScreen.classList.add(
-      "hidden"
-    );
-
-
-    levelsScreen.classList.add(
-      "hidden"
-    );
-
-
-    gameScreen.classList.add(
-      "hidden"
-    );
-
-
-    screen.classList.remove(
-      "hidden"
-    );
-
-  }
-
-
-  /* ==========================================================
      LEVELS
   ========================================================== */
 
   function renderLevels() {
+
+    if (!levelsGrid)
+      return;
+
 
     levelsGrid.innerHTML =
       "";
@@ -6373,6 +5706,161 @@
 
 
   /* ==========================================================
+     SCREENS
+  ========================================================== */
+
+  function showScreen(
+    screen
+  ) {
+
+    homeScreen.classList.add(
+      "hidden"
+    );
+
+
+    levelsScreen.classList.add(
+      "hidden"
+    );
+
+
+    gameScreen.classList.add(
+      "hidden"
+    );
+
+
+    screen.classList.remove(
+      "hidden"
+    );
+
+  }
+
+
+  /* ==========================================================
+     RESULT
+  ========================================================== */
+
+  function showResult(
+    success
+  ) {
+
+    resultPanel.classList.remove(
+      "hidden"
+    );
+
+
+    resultIcon.textContent =
+      success
+        ? "🪷"
+        : "⬇️";
+
+
+    resultTitle.textContent =
+      success
+        ? "बहुत बढ़िया!"
+        : "छत बहुत नीचे आ गई";
+
+
+    resultText.textContent =
+
+      success
+
+        ? (
+            save.currentLevel >=
+            MAX_LEVEL
+
+              ? "गजब! आपने सभी 50 स्तर पूरे कर लिए।"
+
+              : "बुलबुले मिलाकर स्तर पूरा कर दिया!"
+          )
+
+        : "कोई बात नहीं। फिर से कोशिश करते हैं।";
+
+
+    resultScore.textContent =
+      score;
+
+
+    resultPrimaryBtn.textContent =
+
+      success
+
+        ? (
+            save.currentLevel <
+            MAX_LEVEL
+              ? "अगला स्तर"
+              : "स्तर चुनें"
+          )
+
+        : "फिर से खेलें";
+
+
+    resultPrimaryBtn.onclick =
+      () => {
+
+        resultPanel.classList.add(
+          "hidden"
+        );
+
+
+        if (
+          success &&
+          save.currentLevel <
+          MAX_LEVEL
+        ) {
+
+          save.currentLevel++;
+
+
+          saveGame();
+
+
+          createLevel();
+
+        }
+
+        else if (
+          success
+        ) {
+
+          renderLevels();
+
+
+          showScreen(
+            levelsScreen
+          );
+
+        }
+
+        else {
+
+          createLevel();
+
+        }
+
+      };
+
+
+    resultSecondaryBtn.onclick =
+      () => {
+
+        resultPanel.classList.add(
+          "hidden"
+        );
+
+
+        renderLevels();
+
+
+        showScreen(
+          levelsScreen
+        );
+
+      };
+
+  }
+
+
+  /* ==========================================================
      SETTINGS
   ========================================================== */
 
@@ -6416,19 +5904,11 @@
 
       save = {
 
-        currentLevel: 1,
-
-        unlocked: 1,
+        ...defaultSave,
 
         completed: [],
 
-        bestScores: {},
-
-        score: 0,
-
-        best: 0,
-
-        sound: true
+        bestScores: {}
 
       };
 
@@ -6595,188 +6075,7 @@
 
 
   /* ==========================================================
-     RESULT
-  ========================================================== */
-
-  function showResult(
-    success
-  ) {
-
-    resultPanel.classList.remove(
-      "hidden"
-    );
-
-
-    resultIcon.textContent =
-      success
-        ? "🪷"
-        : "⬇️";
-
-
-    resultTitle.textContent =
-      success
-        ? "बहुत बढ़िया!"
-        : "छत बहुत नीचे आ गई";
-
-
-    resultText.textContent =
-      success
-
-        ? (
-            save.currentLevel >=
-            MAX_LEVEL
-
-              ? "गजब! आपने सभी 50 स्तर पूरे कर लिए।"
-
-              : "बुलबुले मिलाकर स्तर पूरा कर दिया!"
-          )
-
-        : "कोई बात नहीं। फिर से कोशिश करते हैं।";
-
-
-    resultScore.textContent =
-      score;
-
-
-    resultPrimaryBtn.textContent =
-      success
-
-        ? (
-            save.currentLevel <
-            MAX_LEVEL
-
-              ? "अगला स्तर"
-
-              : "स्तर चुनें"
-          )
-
-        : "फिर से खेलें";
-
-
-    resultPrimaryBtn.onclick =
-      () => {
-
-        resultPanel.classList.add(
-          "hidden"
-        );
-
-
-        if (
-          success &&
-          save.currentLevel <
-          MAX_LEVEL
-        ) {
-
-          save.currentLevel++;
-
-
-          saveGame();
-
-
-          createLevel();
-
-        }
-
-        else if (
-          success
-        ) {
-
-          renderLevels();
-
-
-          showScreen(
-            levelsScreen
-          );
-
-        }
-
-        else {
-
-          score = 0;
-
-
-          createLevel();
-
-        }
-
-      };
-
-
-    resultSecondaryBtn.onclick =
-      () => {
-
-        resultPanel.classList.add(
-          "hidden"
-        );
-
-
-        renderLevels();
-
-
-        showScreen(
-          levelsScreen
-        );
-
-      };
-
-  }
-
-
-  /* ==========================================================
-     NAVIGATION
-  ========================================================== */
-
-  startBtn.onclick =
-    () => {
-
-      renderLevels();
-
-
-      showScreen(
-        levelsScreen
-      );
-
-    };
-
-
-  homeLevelsBtn.onclick =
-    () => {
-
-      renderLevels();
-
-
-      showScreen(
-        levelsScreen
-      );
-
-    };
-
-
-  backHomeBtn.onclick =
-    () => {
-
-      showScreen(
-        homeScreen
-      );
-
-    };
-
-
-  gameBackBtn.onclick =
-    () => {
-
-      renderLevels();
-
-
-      showScreen(
-        levelsScreen
-      );
-
-    };
-
-
-  /* ==========================================================
-     TOUCH / POINTER
+     TOUCH CONTROL
   ========================================================== */
 
   canvas.addEventListener(
@@ -6910,19 +6209,7 @@
 
   canvas.addEventListener(
     "pointercancel",
-    event => {
-
-      if (
-        activePointerId !==
-        null &&
-        event.pointerId !==
-        activePointerId
-      ) {
-
-        return;
-
-      }
-
+    () => {
 
       pointerHolding =
         false;
@@ -6931,22 +6218,9 @@
       activePointerId =
         null;
 
-
-      try {
-
-        canvas.releasePointerCapture(
-          event.pointerId
-        );
-
-      } catch {}
-
     }
   );
 
-
-  /* ==========================================================
-     AIM
-  ========================================================== */
 
   function updateAim(
     clientX,
@@ -6995,6 +6269,56 @@
       );
 
   }
+
+
+  /* ==========================================================
+     NAVIGATION
+  ========================================================== */
+
+  startBtn.onclick =
+    () => {
+
+      renderLevels();
+
+      showScreen(
+        levelsScreen
+      );
+
+    };
+
+
+  homeLevelsBtn.onclick =
+    () => {
+
+      renderLevels();
+
+      showScreen(
+        levelsScreen
+      );
+
+    };
+
+
+  backHomeBtn.onclick =
+    () => {
+
+      showScreen(
+        homeScreen
+      );
+
+    };
+
+
+  gameBackBtn.onclick =
+    () => {
+
+      renderLevels();
+
+      showScreen(
+        levelsScreen
+      );
+
+    };
 
 
   /* ==========================================================
